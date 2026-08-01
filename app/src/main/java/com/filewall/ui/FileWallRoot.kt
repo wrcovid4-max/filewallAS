@@ -49,7 +49,9 @@ import com.filewall.ui.vault.MoveToFolderDialog
 import com.filewall.ui.vault.TextInputDialog
 import com.filewall.ui.vault.VaultScreen
 import com.filewall.ui.vault.VaultViewModel
+import com.filewall.ui.viewer.VaultVideoPlayer
 import com.filewall.ui.viewer.ViewerScreen
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private enum class Tab { VAULT, HIDDEN, SECURITY }
@@ -100,6 +102,20 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
         launch { vaultViewModel.messages.collect { snackbarHost.showSnackbar(it) } }
         launch { securityViewModel.messages.collect { snackbarHost.showSnackbar(it) } }
         launch { securityViewModel.consentRequests.collect { consentLauncher.launch(it) } }
+
+        // A watch handoff notification names an item; open it, then clear the request so a
+        // configuration change does not re-open it behind the user's back.
+        launch {
+            container.pendingOpen.collect { itemId ->
+                if (itemId == null) return@collect
+                val item = container.repository.observeItem(itemId).first()
+                container.pendingOpen.value = null
+                if (item != null && !item.hidden) {
+                    tab = Tab.VAULT
+                    viewerItem = item
+                }
+            }
+        }
     }
 
     // Selecting the Hidden tab and the Hidden pill are the same act; keep them in step.
@@ -153,7 +169,12 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     onUnlockHidden = { container.lock.unlock() },
                     onOpenItem = { item ->
                         viewerItem = item
-                        if (item.category != com.filewall.model.FileCategory.PHOTO) {
+                        // Photos and video render in-app; anything else needs a viewer we
+                        // do not ship, so hand it over immediately rather than showing an
+                        // empty stage first.
+                        if (item.category == com.filewall.model.FileCategory.DOC ||
+                            item.category == com.filewall.model.FileCategory.OTHER
+                        ) {
                             scope.launch { openExternally(context, container, item) }
                         }
                     },
@@ -184,6 +205,13 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     val bytes = container.repository.fullBytes(target)
                     android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
                 }.getOrNull()
+            },
+            videoPlayer = { playerModifier ->
+                VaultVideoPlayer(
+                    item = item,
+                    repository = container.repository,
+                    modifier = playerModifier,
+                )
             },
             onClose = { viewerItem = null },
             onExport = { exportLauncher.launch(item.name) },

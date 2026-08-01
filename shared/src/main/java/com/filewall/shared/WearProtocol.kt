@@ -24,6 +24,15 @@ object WearProtocol {
     /** MessageClient path: phone -> watch, "sync is off / nothing to show". Payload = reason UTF-8. */
     const val PATH_SYNC_DISABLED = "/filewall/sync_disabled"
 
+    /**
+     * MessageClient path: watch -> phone, "surface this item on the phone". Payload = item id.
+     *
+     * The phone answers with a notification rather than launching itself. Android has not
+     * allowed background activity starts since 10, and a vault that could throw itself open
+     * from a pocket would be the wrong behaviour even if the platform permitted it.
+     */
+    const val PATH_OPEN_ON_PHONE = "/filewall/open_on_phone"
+
     fun imagePath(itemId: String): String = PATH_IMAGE_PREFIX + itemId
 
     fun itemIdFromImagePath(path: String): String? =

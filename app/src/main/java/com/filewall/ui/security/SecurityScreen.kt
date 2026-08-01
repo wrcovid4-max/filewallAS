@@ -66,6 +66,7 @@ private sealed interface PassphrasePrompt {
     data class RestoreLocal(val source: android.net.Uri) : PassphrasePrompt
     data object DriveBackup : PassphrasePrompt
     data object DriveRestore : PassphrasePrompt
+    data object EnableAutoBackup : PassphrasePrompt
 }
 
 @Composable
@@ -383,6 +384,15 @@ fun SecurityScreen(
                         }
                     }
 
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = state.lastDriveBackup
+                            ?.let { stringResourceSafe(R.string.last_backup, it) }
+                            ?: stringResourceSafe(R.string.last_backup_never),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
                     Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
@@ -404,6 +414,23 @@ fun SecurityScreen(
                             Text(stringResourceSafe(R.string.restore))
                         }
                     }
+
+                    SettingDivider()
+
+                    SettingSwitchRow(
+                        title = stringResourceSafe(R.string.auto_backup),
+                        description = stringResourceSafe(R.string.auto_backup_desc),
+                        checked = settings.autoBackupEnabled,
+                        onCheckedChange = { enabled ->
+                            // Enabling needs the passphrase up front; the worker has no one
+                            // to ask when it wakes up.
+                            if (enabled) {
+                                prompt = PassphrasePrompt.EnableAutoBackup
+                            } else {
+                                viewModel.disableAutoBackup()
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -440,12 +467,20 @@ fun SecurityScreen(
     }
 
     prompt?.let { current ->
-        val exporting = current is PassphrasePrompt.ExportLocal || current is PassphrasePrompt.DriveBackup
+        val writing = current is PassphrasePrompt.ExportLocal ||
+            current is PassphrasePrompt.DriveBackup ||
+            current is PassphrasePrompt.EnableAutoBackup
+        val titleRes = when (current) {
+            is PassphrasePrompt.EnableAutoBackup -> R.string.auto_backup
+            else -> if (writing) R.string.backup else R.string.restore
+        }
         PassphraseDialog(
-            title = stringResourceSafe(if (exporting) R.string.backup else R.string.restore),
+            title = stringResourceSafe(titleRes),
             hint = stringResourceSafe(R.string.archive_passphrase_hint),
-            confirmLabel = stringResourceSafe(if (exporting) R.string.backup else R.string.restore),
-            minLength = if (exporting) VaultArchive.MIN_PASSPHRASE_LENGTH else 1,
+            confirmLabel = stringResourceSafe(titleRes),
+            // Restoring must accept whatever the archive was written with; writing enforces
+            // a floor.
+            minLength = if (writing) VaultArchive.MIN_PASSPHRASE_LENGTH else 1,
             onDismiss = { prompt = null },
             onConfirm = { passphrase ->
                 when (current) {
@@ -453,6 +488,7 @@ fun SecurityScreen(
                     is PassphrasePrompt.RestoreLocal -> viewModel.restoreArchive(current.source, passphrase)
                     is PassphrasePrompt.DriveBackup -> viewModel.backupToDrive(passphrase)
                     is PassphrasePrompt.DriveRestore -> viewModel.restoreFromDrive(passphrase)
+                    is PassphrasePrompt.EnableAutoBackup -> viewModel.enableAutoBackup(passphrase)
                 }
                 prompt = null
             },

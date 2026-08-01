@@ -132,9 +132,44 @@ class VaultCrypto {
     fun plaintextSize(source: File): Long =
         (source.length() - HEADER_SIZE - MAC_LENGTH).coerceAtLeast(0L)
 
+    // ------------------------------------------------------------ random access
+
+    /**
+     * Confirms the whole blob is intact and returns its plaintext length.
+     *
+     * Callers that intend to seek around a blob should run this once up front: a seeking
+     * reader can never check the trailing MAC, because it never reads the whole file.
+     */
+    @Throws(IOException::class, GeneralSecurityException::class)
+    fun verify(source: File): Long = verifyMac(source)
+
+    /**
+     * A cipher primed to emit plaintext starting at [plaintextOffset].
+     *
+     * This is why the format uses CTR. The keystream for block *n* depends only on the IV
+     * plus *n*, so jumping to an arbitrary offset costs one big-endian addition — no need to
+     * decrypt everything before it. GCM could not do this at any price.
+     */
+    @Throws(IOException::class, GeneralSecurityException::class)
+    fun cipherAt(source: File, plaintextOffset: Long): Cipher {
+        require(plaintextOffset >= 0) { "Negative offset $plaintextOffset" }
+        val counter = counterFor(readIv(source), plaintextOffset / AES_BLOCK)
+        val cipher = Cipher.getInstance(TRANSFORMATION).apply {
+            init(Cipher.DECRYPT_MODE, dataKey, IvParameterSpec(counter))
+        }
+        // Offsets rarely land on a block boundary; burn the leading keystream bytes of the
+        // block we are starting inside so the very next byte out lines up with the file.
+        val intoBlock = (plaintextOffset % AES_BLOCK).toInt()
+        if (intoBlock > 0) cipher.update(ByteArray(intoBlock))
+        return cipher
+    }
+
+    /** Byte offset of the first ciphertext byte in a blob. */
+    fun ciphertextStart(): Long = HEADER_SIZE.toLong()
+
     // ---------------------------------------------------------------- internals
 
-    private fun newDecryptCipher(source: File): Cipher {
+    private fun readIv(source: File): ByteArray {
         val iv = ByteArray(IV_LENGTH)
         FileInputStream(source).use { input ->
             val magic = ByteArray(MAGIC.size)
@@ -142,10 +177,13 @@ class VaultCrypto {
             if (!magic.contentEquals(MAGIC)) throw IOException("Not a FileWall blob: ${source.name}")
             readFully(input, iv)
         }
-        return Cipher.getInstance(TRANSFORMATION).apply {
-            init(Cipher.DECRYPT_MODE, dataKey, IvParameterSpec(iv))
-        }
+        return iv
     }
+
+    private fun newDecryptCipher(source: File): Cipher =
+        Cipher.getInstance(TRANSFORMATION).apply {
+            init(Cipher.DECRYPT_MODE, dataKey, IvParameterSpec(readIv(source)))
+        }
 
     /** Returns the ciphertext length once the MAC has been confirmed. */
     @Throws(IOException::class, GeneralSecurityException::class)
@@ -217,7 +255,9 @@ class VaultCrypto {
         runCatching { keyStore.deleteEntry(ALIAS_MAC) }
     }
 
-    private companion object {
+    // `internal` rather than `private` so the counter arithmetic below can be unit-tested;
+    // seek math is the easiest part of this file to get subtly wrong.
+    internal companion object {
         const val ANDROID_KEYSTORE = "AndroidKeyStore"
         const val ALIAS_DATA = "filewall_data_v1"
         const val ALIAS_MAC = "filewall_mac_v1"
@@ -225,7 +265,28 @@ class VaultCrypto {
         const val MAC_ALGORITHM = "HmacSHA256"
         const val IV_LENGTH = 16
         const val MAC_LENGTH = 32
+        const val AES_BLOCK = 16
         const val BUFFER_SIZE = 64 * 1024
+
+        /**
+         * Adds [blockIndex] to the 128-bit big-endian counter block, the way CTR mode does
+         * internally. Carries ripple leftwards; overflow past byte 0 wraps, exactly as the
+         * cipher would.
+         */
+        fun counterFor(iv: ByteArray, blockIndex: Long): ByteArray {
+            val counter = iv.copyOf()
+            var remaining = blockIndex
+            var carry = 0L
+            var index = counter.size - 1
+            while (index >= 0 && (remaining != 0L || carry != 0L)) {
+                val sum = (counter[index].toLong() and 0xFF) + (remaining and 0xFF) + carry
+                counter[index] = (sum and 0xFF).toByte()
+                carry = sum ushr 8
+                remaining = remaining ushr 8
+                index--
+            }
+            return counter
+        }
         val MAGIC = byteArrayOf('F'.code.toByte(), 'W'.code.toByte(), 'V'.code.toByte(), '1'.code.toByte())
         const val HEADER_SIZE = 4 + IV_LENGTH
 

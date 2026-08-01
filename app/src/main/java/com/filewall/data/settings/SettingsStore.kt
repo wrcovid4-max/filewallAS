@@ -24,6 +24,7 @@ data class VaultSettings(
     val disableStorageSync: Boolean = true,
     val allowScreenshots: Boolean = false,
     val syncToWatch: Boolean = true,
+    val autoBackupEnabled: Boolean = false,
     val sortField: SortField = SortField.DATE_ADDED,
     val sortAscending: Boolean = false,
     val gridView: Boolean = true,
@@ -45,6 +46,7 @@ class SettingsStore(context: Context) {
             disableStorageSync = prefs[Keys.NO_STORAGE_SYNC] ?: true,
             allowScreenshots = prefs[Keys.ALLOW_SCREENSHOTS] ?: false,
             syncToWatch = prefs[Keys.SYNC_TO_WATCH] ?: true,
+            autoBackupEnabled = prefs[Keys.AUTO_BACKUP] ?: false,
             sortField = prefs[Keys.SORT_FIELD]?.toEnum { SortField.valueOf(it) } ?: SortField.DATE_ADDED,
             sortAscending = prefs[Keys.SORT_ASC] ?: false,
             gridView = prefs[Keys.GRID_VIEW] ?: true,
@@ -59,6 +61,7 @@ class SettingsStore(context: Context) {
     suspend fun setDisableStorageSync(value: Boolean) = put(Keys.NO_STORAGE_SYNC, value)
     suspend fun setAllowScreenshots(value: Boolean) = put(Keys.ALLOW_SCREENSHOTS, value)
     suspend fun setSyncToWatch(value: Boolean) = put(Keys.SYNC_TO_WATCH, value)
+    suspend fun setAutoBackupEnabled(value: Boolean) = put(Keys.AUTO_BACKUP, value)
     suspend fun setSortField(value: SortField) = put(Keys.SORT_FIELD, value.name)
     suspend fun setSortAscending(value: Boolean) = put(Keys.SORT_ASC, value)
     suspend fun setGridView(value: Boolean) = put(Keys.GRID_VIEW, value)
@@ -79,6 +82,7 @@ class SettingsStore(context: Context) {
         val NO_STORAGE_SYNC = booleanPreferencesKey("disable_storage_sync")
         val ALLOW_SCREENSHOTS = booleanPreferencesKey("allow_screenshots")
         val SYNC_TO_WATCH = booleanPreferencesKey("sync_to_watch")
+        val AUTO_BACKUP = booleanPreferencesKey("auto_backup_enabled")
         val SORT_FIELD = stringPreferencesKey("sort_field")
         val SORT_ASC = booleanPreferencesKey("sort_ascending")
         val GRID_VIEW = booleanPreferencesKey("grid_view")

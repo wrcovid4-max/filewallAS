@@ -89,6 +89,20 @@ class WatchRepository(private val context: Context) : DataClient.OnDataChangedLi
         runCatching { broadcast(WearProtocol.PATH_REQUEST_IMAGE, itemId.toByteArray()) }
     }
 
+    /**
+     * Asks the phone to surface this item on its own screen.
+     *
+     * Used for the things a watch cannot usefully show — video and documents. Returns false
+     * when no phone is in range, so the UI can say so instead of appearing to succeed.
+     */
+    suspend fun openOnPhone(itemId: String): Boolean {
+        if (reachableNodes().isEmpty()) return false
+        return runCatching {
+            broadcast(WearProtocol.PATH_OPEN_ON_PHONE, itemId.toByteArray())
+            true
+        }.getOrDefault(false)
+    }
+
     private suspend fun reachableNodes(): List<String> = withContext(Dispatchers.IO) {
         runCatching {
             capabilityClient

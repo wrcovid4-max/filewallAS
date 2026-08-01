@@ -3,6 +3,7 @@ package com.filewall.wear.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,10 +57,11 @@ import com.filewall.shared.WearCategory
 import com.filewall.shared.WearItem
 import com.filewall.wear.R
 import com.filewall.wear.data.WatchRepository
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 private const val ROUTE_LIST = "list"
-private const val ROUTE_IMAGE = "image/{itemId}"
+private const val ROUTE_DETAIL = "detail/{itemId}"
 
 @Composable
 fun WearApp(repository: WatchRepository) {
@@ -69,15 +72,15 @@ fun WearApp(repository: WatchRepository) {
             composable(ROUTE_LIST) {
                 FileListScreen(
                     repository = repository,
-                    onOpen = { item -> navController.navigate("image/${item.id}") },
+                    onOpen = { item -> navController.navigate("detail/${item.id}") },
                 )
             }
             composable(
-                route = ROUTE_IMAGE,
+                route = ROUTE_DETAIL,
                 arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
             ) { entry ->
                 val itemId = entry.arguments?.getString("itemId").orEmpty()
-                ImageScreen(repository = repository, itemId = itemId)
+                DetailScreen(repository = repository, itemId = itemId)
             }
         }
     }
@@ -184,6 +187,97 @@ private fun FileChip(
             Text(text = formatBytes(item.sizeBytes), maxLines = 1)
         },
     )
+}
+
+/**
+ * Routes an opened item to whatever the watch can honestly do with it: photos are shown,
+ * everything else is handed back to the phone.
+ */
+@Composable
+private fun DetailScreen(repository: WatchRepository, itemId: String) {
+    val state by repository.state.collectAsStateWithLifecycle()
+    val item = state.items.firstOrNull { it.id == itemId }
+
+    when (item?.category) {
+        WearCategory.PHOTO -> ImageScreen(repository = repository, itemId = itemId)
+        null -> CenteredMessage(stringResource(R.string.image_unavailable))
+        else -> HandoffScreen(repository = repository, item = item)
+    }
+}
+
+/**
+ * A 1.4" screen cannot usefully play a video or read a PDF, and pulling either across the
+ * Bluetooth link would be slow and pointless. Show what we already have — the thumbnail
+ * from the manifest — and offer to move the job to the phone.
+ */
+@Composable
+private fun HandoffScreen(repository: WatchRepository, item: WearItem) {
+    val thumbnails by repository.thumbnails.collectAsStateWithLifecycle()
+    val bitmap = thumbnails[item.id]
+    var outcome by remember(item.id) { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    val sentText = stringResource(R.string.handoff_sent)
+    val failedText = stringResource(R.string.handoff_failed)
+
+    LaunchedEffect(item.id) {
+        if (item.hasThumb) repository.loadThumbnail(item.id)
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = item.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.35f),
+            )
+        }
+
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.title3,
+                color = MaterialTheme.colors.onBackground,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = when (item.category) {
+                    WearCategory.VIDEO -> stringResource(R.string.video_on_watch)
+                    WearCategory.DOC -> stringResource(R.string.doc_on_watch)
+                    else -> stringResource(R.string.file_on_watch)
+                },
+                style = MaterialTheme.typography.caption2,
+                color = MaterialTheme.colors.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(14.dp))
+            Chip(
+                onClick = {
+                    scope.launch {
+                        outcome = if (repository.openOnPhone(item.id)) sentText else failedText
+                    }
+                },
+                colors = ChipDefaults.primaryChipColors(),
+                label = {
+                    Text(
+                        text = outcome ?: stringResource(R.string.open_on_phone),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+            )
+        }
+    }
 }
 
 @Composable

@@ -9,4 +9,11 @@
     <string name="loading_image">Loading…</string>
     <string name="image_unavailable">Couldn\'t load this image.</string>
     <string name="storage_summary">%1$s in the vault</string>
+
+    <string name="open_on_phone">Open on phone</string>
+    <string name="handoff_sent">Sent to your phone</string>
+    <string name="handoff_failed">Your phone isn\'t in range</string>
+    <string name="video_on_watch">Videos play on your phone.</string>
+    <string name="doc_on_watch">Documents open on your phone.</string>
+    <string name="file_on_watch">This file opens on your phone.</string>
 </resources>

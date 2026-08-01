@@ -12,6 +12,7 @@ import com.filewall.model.StorageBreakdown
 import com.filewall.model.VaultFolder
 import com.filewall.model.VaultItem
 import com.filewall.data.media.ThumbnailFactory
+import com.filewall.data.media.VaultDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -230,6 +231,40 @@ class VaultRepository(
     }
 
     private fun blobFor(item: VaultItem): File = File(blobDir, item.blobName)
+
+    // ---------------------------------------------------------------- playback
+
+    /**
+     * Prepares an item for in-place playback and returns the URI ExoPlayer should open.
+     *
+     * The integrity check happens here, once, because the seeking reader behind that URI
+     * can never do it — it only ever touches the byte ranges the player asks for. A blob
+     * that fails verification throws before a player is ever built.
+     */
+    suspend fun openForPlayback(item: VaultItem): android.net.Uri = withContext(Dispatchers.IO) {
+        val blob = blobFor(item)
+        crypto.verify(blob)
+        VaultDataSource.uriFor(item.blobName)
+    }
+
+    /**
+     * Factory ExoPlayer uses to reach vault blobs.
+     *
+     * Resolution is deliberately narrow: the URI names a file *inside* the blob directory
+     * and nothing else, so a malformed URI cannot walk out of it.
+     */
+    fun playbackDataSourceFactory(): VaultDataSource.Factory =
+        VaultDataSource.Factory(crypto) { uri ->
+            val name = VaultDataSource.blobNameFrom(uri)
+            if (name == null || name == ".." || name.contains('/') || name.contains('\\')) {
+                null
+            } else {
+                val candidate = File(blobDir, name)
+                // Belt and braces: the name is already checked, and the resolved parent must
+                // still be the blob directory itself.
+                candidate.takeIf { it.parentFile?.canonicalPath == blobDir.canonicalPath }
+            }
+        }
 
     // ------------------------------------------------------------------ mutation
 

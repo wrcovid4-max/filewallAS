@@ -73,6 +73,7 @@ import com.filewall.util.formatTimestamp
 fun ViewerScreen(
     item: VaultItem,
     loadImage: suspend (VaultItem) -> ImageBitmap?,
+    videoPlayer: @Composable (Modifier) -> Unit,
     onClose: () -> Unit,
     onExport: () -> Unit,
     onMove: () -> Unit,
@@ -103,7 +104,8 @@ fun ViewerScreen(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .pointerInput(item.id) {
+                    .pointerInput(item.id, item.category) {
+                        if (item.category != FileCategory.PHOTO) return@pointerInput
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(1f, 6f)
                             if (scale > 1f) {
@@ -133,6 +135,8 @@ fun ViewerScreen(
                                 translationY = offsetY,
                             ),
                     )
+
+                    item.category == FileCategory.VIDEO -> videoPlayer(Modifier.fillMaxWidth())
 
                     else -> NoPreview(onOpenExternally)
                 }
@@ -184,22 +188,24 @@ fun ViewerScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Spacer(Modifier.weight(1f, fill = false))
-                StageButton(
-                    icon = Icons.Filled.ZoomIn,
-                    description = stringResourceSafe(R.string.zoom),
-                    onClick = {
-                        // Tap-to-zoom cycles rather than toggling, so 2x is reachable one-handed.
-                        scale = when {
-                            scale < 1.5f -> 2f
-                            scale < 2.5f -> 3f
-                            else -> 1f
-                        }
-                        if (scale == 1f) {
-                            offsetX = 0f
-                            offsetY = 0f
-                        }
-                    },
-                )
+                if (item.category == FileCategory.PHOTO) {
+                    StageButton(
+                        icon = Icons.Filled.ZoomIn,
+                        description = stringResourceSafe(R.string.zoom),
+                        onClick = {
+                            // Tap-to-zoom cycles rather than toggling, so 2x stays one-handed.
+                            scale = when {
+                                scale < 1.5f -> 2f
+                                scale < 2.5f -> 3f
+                                else -> 1f
+                            }
+                            if (scale == 1f) {
+                                offsetX = 0f
+                                offsetY = 0f
+                            }
+                        },
+                    )
+                }
                 StageButton(
                     icon = if (detailsVisible) Icons.Filled.Fullscreen else Icons.Filled.FullscreenExit,
                     description = stringResourceSafe(R.string.fullscreen),

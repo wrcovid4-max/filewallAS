@@ -1,6 +1,7 @@
 package com.filewall.di
 
 import android.content.Context
+import com.filewall.data.backup.AutoBackupSecret
 import com.filewall.data.backup.DriveBackup
 import com.filewall.data.backup.VaultArchive
 import com.filewall.data.crypto.PinManager
@@ -12,6 +13,7 @@ import com.filewall.data.settings.SettingsStore
 import com.filewall.data.wear.WearSyncManager
 import com.filewall.ui.lock.LockController
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Hand-rolled dependency graph.
@@ -42,9 +44,19 @@ class AppContainer(context: Context, appScope: CoroutineScope) {
 
     val drive: DriveBackup by lazy { DriveBackup(appContext) }
 
+    val autoBackupSecret: AutoBackupSecret by lazy { AutoBackupSecret(appContext) }
+
     val wearSync: WearSyncManager by lazy { WearSyncManager(appContext, repository, settings) }
 
     val lock: LockController by lazy {
         LockController(settings, repository, thumbnails, appScope)
     }
+
+    /**
+     * Item the user asked to open from their watch, waiting for the UI to pick it up.
+     *
+     * Lives on the container rather than in an Activity extra because the notification can
+     * arrive while the app is already running, in which case there is no fresh Intent to read.
+     */
+    val pendingOpen = MutableStateFlow<String?>(null)
 }

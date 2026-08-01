@@ -57,9 +57,10 @@ Filenames, MIME types and folder membership live only in the Room database, whic
 app-private. Nothing on disk reveals what a blob holds.
 
 **Where plaintext can exist:** exactly one place — `cacheDir/preview/`, and only while an
-external app is viewing a file type FileWall can't render itself (video, PDF, documents).
-That directory is wiped when the vault locks, when the activity pauses, and on next launch,
-and it's excluded from cloud backup and device transfer.
+external app is viewing a file type FileWall can't render itself (documents, and anything
+unrecognised). Photos and video are decrypted in memory only. That directory is wiped when
+the vault locks, when the activity pauses, and on next launch, and it's excluded from cloud
+backup and device transfer.
 
 ### The passcode
 
@@ -89,7 +90,14 @@ the archive is decrypted to a staging directory, the HMAC is checked, and only t
 files ingested.
 
 **Google Drive** (needs one-time setup): uploads that same `.fwvault` into Drive's private
-`appDataFolder`, so Google stores a blob it cannot read.
+`appDataFolder`, so Google stores a blob it cannot read. Manual Backup/Restore buttons, plus
+an optional **Back up daily** schedule (WorkManager, unmetered network, battery not low).
+
+The schedule needs the passphrase without anyone there to type it, so enabling it seals the
+passphrase with a *separate* AES-GCM key that never leaves the Keystore — inert on any other
+hardware, and useless to someone holding a copy of the app's data directory. Switching the
+schedule off erases it. Manual backup and restore never store anything, and restoring onto a
+new phone still requires typing the passphrase, because that key cannot travel either.
 
 ### Enabling Google Drive backup
 
@@ -121,6 +129,15 @@ The watch is a viewfinder, not a second copy of the vault. Two rules shape the w
 | `/filewall/manifest`         | phone → watch | item JSON + a 160px thumbnail Asset per item|
 | `/filewall/request_image`    | watch → phone | item id                                     |
 | `/filewall/image/<id>`       | phone → watch | one 640px JPEG Asset                        |
+| `/filewall/open_on_phone`    | watch → phone | item id                                     |
+
+Photos open on the watch. Video and documents can't usefully be read on a 1.4" screen and
+would be slow to pull over Bluetooth, so those show the thumbnail the manifest already
+carried plus an **Open on phone** button. The phone answers with a notification rather than
+launching itself — background activity starts have been blocked since Android 10, and a
+vault that could throw itself open from inside a pocket would be wrong even where the
+platform allowed it. Tapping the notification opens that item. A request naming a hidden
+item is refused outright rather than acknowledged.
 
 The manifest is capped at the 60 most recent unlocked files and is republished whenever the
 vault changes. Turning off **Sync to Wear OS** in Security deletes everything the watch is
@@ -143,8 +160,9 @@ become the only way in if *Disable Passcode Fallback* is on.
 inactivity auto-lock (15s / 30s / 1m / 5m / Never), device-storage-sync and screenshot
 toggles, watch sync, and both backup paths.
 
-**Viewer** — pinch-zoom image stage, and the Item Details sheet with Export / Move / Rename /
-Delete. Non-images hand off to an external viewer through a `FileProvider` grant.
+**Viewer** — pinch-zoom image stage, in-place video playback, and the Item Details sheet with
+Export / Move / Rename / Delete. Documents and unknown types hand off to an external viewer
+through a `FileProvider` grant.
 
 ### A note on `Allow Screenshots`
 
@@ -174,11 +192,27 @@ FileWallApp ──> AppContainer ──┬─> VaultCrypto      (Keystore, AES-C
 to Security and back must not silently re-open the archive, and the idle timer has to keep
 running while you're looking at an image.
 
+## Video playback
+
+Video streams straight out of the encrypted blob — no decrypt-to-disk step, so plaintext
+never exists outside the decoder's buffers.
+
+`VaultDataSource` is a media3 `DataSource` over the vault. Scrubbing a video is nothing but
+a series of seeks, and CTR makes those cheap: the keystream for block *n* depends only on
+the IV plus *n*, so `VaultCrypto.cipherAt` re-derives it at any offset with one big-endian
+addition. GCM could not do this at any price — which is the second reason the format uses
+CTR, beyond constant memory.
+
+The trade-off is that a seeking reader can never check the trailing HMAC, because it never
+reads the whole file. `VaultRepository.openForPlayback` therefore verifies once, up front,
+and throws before a player is ever built. The counter arithmetic is unit-tested
+(`CtrCounterTest`) — a carry bug there wouldn't crash, it would hand ExoPlayer plausible
+garbage part-way into a file.
+
 ## Known gaps
 
-- **Video playback** decrypts to the preview cache and hands off to the system player rather
-  than streaming. AES-CTR is seekable, so a media3 `DataSource` that decrypts at offset would
-  remove the temporary plaintext entirely — the format is already shaped for it.
-- **The watch shows images only.** Video and documents appear in the list with a type badge
-  but won't open there.
-- **Drive sync is manual.** Backup and Restore are buttons, not a background sync worker.
+- **Restore is all-or-nothing.** There's no way to pull a single file out of an archive
+  without restoring the whole thing.
+- **No shared-album or multi-device sync.** Drive holds one archive per account; two phones
+  writing to the same account will overwrite each other's backups.
+- **The watch cannot import.** It's a read-only view; adding files is phone-only.

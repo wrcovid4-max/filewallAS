@@ -98,7 +98,16 @@
     <string name="import_archive">Restore archive</string>
     <string name="archive_passphrase">Archive passphrase</string>
     <string name="archive_passphrase_hint">At least 8 characters. You will need it to restore.</string>
+    <string name="auto_backup">Back up daily</string>
+    <string name="auto_backup_desc">Uploads the encrypted archive once a day on Wi-Fi. Your passphrase is sealed with a device-only key so the schedule can run unattended.</string>
+    <string name="last_backup">Last backup: %1$s</string>
+    <string name="last_backup_never">No backup in Drive yet</string>
     <string name="copyright">© 2026 Vault Security Lab</string>
+
+    <!-- Wear handoff -->
+    <string name="handoff_channel">Opened from your watch</string>
+    <string name="handoff_channel_desc">Tap-to-open requests sent from the FileWall watch app.</string>
+    <string name="handoff_title">Open in FileWall</string>
 
     <!-- Viewer -->
     <string name="item_details">Item Details</string>
