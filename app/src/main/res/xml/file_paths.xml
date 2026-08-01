@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Plaintext is only ever materialised here, and only for as long as an external
+         viewer needs it. VaultRepository.clearPreviewCache() wipes it on lock. -->
+    <cache-path
+        name="preview"
+        path="preview/" />
+</paths>

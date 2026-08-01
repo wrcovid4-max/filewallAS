@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Advertised so the watch can discover a phone running FileWall. -->
+    <string-array name="android_wear_capabilities">
+        <item>filewall_phone</item>
+    </string-array>
+</resources>

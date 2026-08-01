@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FileWall</string>
+
+    <!-- Bottom navigation -->
+    <string name="tab_open_vault">Open Vault</string>
+    <string name="tab_hidden">Hidden</string>
+    <string name="tab_security">Security</string>
+
+    <!-- Vault -->
+    <string name="storage_used">%1$s USED</string>
+    <string name="search_hint">Search files by name…</string>
+    <string name="filter_unlocked">Unlocked</string>
+    <string name="filter_hidden">Hidden</string>
+    <string name="item_count">%1$d items</string>
+    <string name="section_folders">Folders</string>
+    <string name="section_files">Files</string>
+    <string name="new_folder">New Folder</string>
+    <string name="delete_all">Delete All</string>
+    <string name="sort_date_added">Date Added</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_size">Size</string>
+    <string name="sort_type">Type</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_colour">Colour</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_export">Export</string>
+    <string name="action_move">Move</string>
+    <string name="action_hide">Move to Hidden</string>
+    <string name="action_unhide">Move to Unlocked</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_add_files">Add files</string>
+    <string name="empty_vault">Nothing here yet. Tap the upload button to bring files into the vault.</string>
+    <string name="empty_search">No files match “%1$s”.</string>
+
+    <!-- Hidden vault -->
+    <string name="unlock_hidden_vault">Unlock Hidden Vault</string>
+    <string name="unlock_subtitle">Enter passcode to access personal safe files</string>
+    <string name="set_passcode">Set a Passcode</string>
+    <string name="set_passcode_subtitle">Choose a 4-digit PIN for your hidden archive</string>
+    <string name="confirm_passcode">Confirm Passcode</string>
+    <string name="confirm_passcode_subtitle">Enter the same PIN again</string>
+    <string name="passcode_mismatch">Those PINs did not match. Start again.</string>
+    <string name="passcode_wrong">Wrong passcode</string>
+    <string name="passcode_locked_out">Too many attempts. Try again in %1$d s.</string>
+    <string name="use_biometrics">Use fingerprint</string>
+    <string name="biometric_title">Unlock hidden archive</string>
+    <string name="biometric_subtitle">Confirm it is you to open your personal safe files</string>
+    <string name="biometric_negative">Use PIN</string>
+
+    <!-- Security -->
+    <string name="security_title">Biometric &amp; Passcode Security</string>
+    <string name="security_subtitle">Manage passcode and access for your personal encrypted folders.</string>
+    <string name="storage_breakdown">Storage Breakdown</string>
+    <string name="storage_used_plain">%1$s Used</string>
+    <string name="cat_photos">Photos</string>
+    <string name="cat_videos">Videos</string>
+    <string name="cat_docs">Docs</string>
+    <string name="secure_vault_locking">Secure Vault Locking</string>
+    <string name="passcode_active">Passcode lock is ACTIVE</string>
+    <string name="passcode_inactive">Passcode lock is OFF</string>
+    <string name="fingerprint_face">Fingerprint &amp; Face ID</string>
+    <string name="fingerprint_face_desc">Unlock your hidden archive using biometrics</string>
+    <string name="disable_passcode_fallback">Disable Passcode Fallback</string>
+    <string name="disable_passcode_fallback_desc">Only allow biometrics to unlock hidden archive. Disables PIN code fallback when biometrics are enabled.</string>
+    <string name="change_passcode">Change Passcode PIN</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="auto_lock">Inactivity Auto-Lock</string>
+    <string name="auto_lock_desc">Secure folder session timeout</string>
+    <string name="select_time_limit">Select time limit:</string>
+    <string name="auto_lock_15s">15s</string>
+    <string name="auto_lock_30s">30s</string>
+    <string name="auto_lock_1m">1m</string>
+    <string name="auto_lock_5m">5m</string>
+    <string name="auto_lock_never">Never</string>
+    <string name="auto_lock_hint_15">Locks folder after 15 seconds of idle behaviors. (Great for testing!)</string>
+    <string name="auto_lock_hint">Locks folder after %1$s of idle behaviors.</string>
+    <string name="auto_lock_hint_never">The hidden archive stays open until you leave the app.</string>
+    <string name="disable_storage_sync">Disable Device Storage Sync</string>
+    <string name="disable_storage_sync_desc">Prevent the app from automatically interacting with device media storage.</string>
+    <string name="allow_screenshots">Allow Screenshots</string>
+    <string name="allow_screenshots_desc">Off by default so vault contents stay out of screenshots, screen recordings and the app switcher preview. Turn on only if you need to capture the screen.</string>
+    <string name="sync_to_watch">Sync to Wear OS</string>
+    <string name="sync_to_watch_desc">Mirror unlocked files to the FileWall watch app. Hidden files are never sent.</string>
+    <string name="cloud_backup">Cloud Backup &amp; Sync</string>
+    <string name="backup">Backup</string>
+    <string name="restore">Restore</string>
+    <string name="sign_out">Sign out</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="drive_unconfigured">Add an OAuth client ID to enable Drive sync. Local archive backup works without it.</string>
+    <string name="local_archive">Encrypted Archive</string>
+    <string name="local_archive_desc">Export the whole vault as a single passphrase-protected .fwvault file, or restore one.</string>
+    <string name="export_archive">Export archive</string>
+    <string name="import_archive">Restore archive</string>
+    <string name="archive_passphrase">Archive passphrase</string>
+    <string name="archive_passphrase_hint">At least 8 characters. You will need it to restore.</string>
+    <string name="copyright">© 2026 Vault Security Lab</string>
+
+    <!-- Viewer -->
+    <string name="item_details">Item Details</string>
+    <string name="detail_name">Name:</string>
+    <string name="detail_type">Type:</string>
+    <string name="detail_size">Size:</string>
+    <string name="detail_added">Added:</string>
+    <string name="type_image">Image File</string>
+    <string name="type_video">Video File</string>
+    <string name="type_doc">Document</string>
+    <string name="type_other">File</string>
+    <string name="badge_image">IMAGE</string>
+    <string name="badge_video">VIDEO</string>
+    <string name="badge_doc">DOC</string>
+    <string name="badge_file">FILE</string>
+    <string name="close">Close</string>
+    <string name="zoom">Zoom</string>
+    <string name="fullscreen">Fullscreen</string>
+    <string name="open_externally">Open with…</string>
+    <string name="cannot_preview">No in-app preview for this file type. Use Export or Open with.</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_new_folder">New folder</string>
+    <string name="dialog_rename_folder">Rename folder</string>
+    <string name="dialog_rename_file">Rename file</string>
+    <string name="dialog_folder_colour">Folder colour</string>
+    <string name="dialog_name_hint">Name</string>
+    <string name="dialog_move_title">Move to folder</string>
+    <string name="dialog_no_folder">No folder</string>
+    <string name="dialog_delete_all_title">Delete all folders?</string>
+    <string name="dialog_delete_all_body">Every folder and the %1$d files inside them will be permanently erased. This cannot be undone.</string>
+    <string name="dialog_delete_item_title">Delete “%1$s”?</string>
+    <string name="dialog_delete_item_body">This file will be permanently erased from the vault.</string>
+    <string name="dialog_delete_folder_title">Delete “%1$s”?</string>
+    <string name="dialog_delete_folder_body">The folder and its %1$d files will be permanently erased.</string>
+
+    <!-- Snackbars -->
+    <string name="imported_count">Added %1$d file(s) to the vault</string>
+    <string name="exported_ok">Exported “%1$s”</string>
+    <string name="deleted_ok">Deleted “%1$s”</string>
+    <string name="backup_ok">Backup complete</string>
+    <string name="restore_ok">Restored %1$d item(s)</string>
+    <string name="operation_failed">%1$s</string>
+</resources>
