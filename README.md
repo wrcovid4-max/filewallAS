@@ -16,7 +16,12 @@ Services Data Layer — which is a native-only API.
 
 ## Building
 
-Open the project in Android Studio (Ladybug or newer) and run the `app` configuration, or:
+**New to the project? [BUILDING.md](BUILDING.md) walks through it step by step** — tools,
+phone setup, what to do when the first build complains, and the optional Drive and Wear OS
+setup.
+
+The short version — open the project in Android Studio (Ladybug or newer) and run the `app`
+configuration, or:
 
 ```bash
 ./gradlew :app:assembleDebug        # phone APK
