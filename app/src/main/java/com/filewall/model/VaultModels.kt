@@ -84,6 +84,11 @@ data class VaultItem(
     @ColumnInfo(defaultValue = "0") val height: Int = 0,
 ) {
     val extension: String get() = name.substringAfterLast('.', "")
+
+    /** PDFs render in-app; other documents hand off to an external viewer. */
+    val isPdf: Boolean
+        get() = mimeType.equals("application/pdf", ignoreCase = true) ||
+            extension.equals("pdf", ignoreCase = true)
 }
 
 /** A user-made folder. Colour is an index into [FolderPalette]. */

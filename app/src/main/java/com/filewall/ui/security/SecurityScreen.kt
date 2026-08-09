@@ -80,7 +80,24 @@ fun SecurityScreen(
     val settings = state.settings
 
     var prompt by remember { mutableStateOf<PassphrasePrompt?>(null) }
-    val biometricAvailable = remember { Biometrics.isAvailable(context) }
+    // Re-checked on every resume: the user can leave to Settings, enrol a fingerprint, and
+    // come back expecting the toggle to be live now.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var biometricStatus by remember { mutableStateOf(Biometrics.status(context)) }
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                biometricStatus = Biometrics.status(context)
+                viewModel.refreshPinState()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val biometricAvailable = biometricStatus == com.filewall.util.BiometricStatus.AVAILABLE
+
+    // Switching to this tab is not an app resume, so catch a PIN set on the Hidden tab here.
+    androidx.compose.runtime.LaunchedEffect(Unit) { viewModel.refreshPinState() }
 
     val signInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -126,9 +143,26 @@ fun SecurityScreen(
 
                 SettingSwitchRow(
                     title = stringResourceSafe(R.string.fingerprint_face),
-                    description = stringResourceSafe(R.string.fingerprint_face_desc),
+                    // Tell the user why it's off rather than leaving a dead grey switch.
+                    description = when (biometricStatus) {
+                        com.filewall.util.BiometricStatus.NONE_ENROLLED ->
+                            stringResourceSafe(R.string.biometric_none_enrolled)
+                        com.filewall.util.BiometricStatus.NO_HARDWARE ->
+                            stringResourceSafe(R.string.biometric_no_hardware)
+                        com.filewall.util.BiometricStatus.UNAVAILABLE ->
+                            stringResourceSafe(R.string.biometric_unavailable)
+                        com.filewall.util.BiometricStatus.AVAILABLE ->
+                            if (!state.pinSet) {
+                                stringResourceSafe(R.string.biometric_needs_pin)
+                            } else {
+                                stringResourceSafe(R.string.fingerprint_face_desc)
+                            }
+                    },
                     checked = settings.biometricEnabled && biometricAvailable,
-                    enabled = settings.vaultLockEnabled && biometricAvailable,
+                    // A PIN must exist first — it's the enrolment step and the fallback.
+                    // No dependency on the vault-lock toggle, which was the bug: a fresh
+                    // vault has lock defaulted on but the row read it as off.
+                    enabled = biometricAvailable && state.pinSet,
                     onCheckedChange = { viewModel.setBiometricEnabled(it) },
                 )
 

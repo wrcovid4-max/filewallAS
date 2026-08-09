@@ -74,6 +74,7 @@ fun ViewerScreen(
     item: VaultItem,
     loadImage: suspend (VaultItem) -> ImageBitmap?,
     videoPlayer: @Composable (Modifier) -> Unit,
+    pdfViewer: @Composable (Modifier) -> Unit,
     onClose: () -> Unit,
     onExport: () -> Unit,
     onMove: () -> Unit,
@@ -138,6 +139,8 @@ fun ViewerScreen(
 
                     item.category == FileCategory.VIDEO -> videoPlayer(Modifier.fillMaxWidth())
 
+                    item.isPdf -> pdfViewer(Modifier.fillMaxSize())
+
                     else -> NoPreview(onOpenExternally)
                 }
             }
@@ -181,13 +184,14 @@ fun ViewerScreen(
             }
 
             // ------------------------------------------------- stage controls
+            // Always bottom-right; when the details sheet is up, float above it instead of
+            // sitting dead-centre over the content (which is what overlapped the preview text).
             Row(
                 Modifier
-                    .align(if (detailsVisible) Alignment.Center else Alignment.BottomEnd)
-                    .padding(20.dp),
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = if (detailsVisible) 280.dp else 28.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Spacer(Modifier.weight(1f, fill = false))
                 if (item.category == FileCategory.PHOTO) {
                     StageButton(
                         icon = Icons.Filled.ZoomIn,

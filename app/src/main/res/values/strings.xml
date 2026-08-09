@@ -62,6 +62,10 @@
     <string name="passcode_inactive">Passcode lock is OFF</string>
     <string name="fingerprint_face">Fingerprint &amp; Face ID</string>
     <string name="fingerprint_face_desc">Unlock your hidden archive using biometrics</string>
+    <string name="biometric_needs_pin">Set a passcode first — biometrics unlock the same archive.</string>
+    <string name="biometric_none_enrolled">No fingerprint or face is set up on this phone yet. Add one in Settings, then come back.</string>
+    <string name="biometric_no_hardware">This device has no fingerprint or face sensor.</string>
+    <string name="biometric_unavailable">Biometrics are temporarily unavailable. Try again in a moment.</string>
     <string name="disable_passcode_fallback">Disable Passcode Fallback</string>
     <string name="disable_passcode_fallback_desc">Only allow biometrics to unlock hidden archive. Disables PIN code fallback when biometrics are enabled.</string>
     <string name="change_passcode">Change Passcode PIN</string>

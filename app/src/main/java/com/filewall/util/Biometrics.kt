@@ -6,22 +6,50 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
+/** Why biometric unlock is or isn't offerable, so the UI can say something useful. */
+enum class BiometricStatus {
+    /** Hardware present, something enrolled, ready to prompt. */
+    AVAILABLE,
+
+    /** Sensor exists but the user has not enrolled a fingerprint or face. */
+    NONE_ENROLLED,
+
+    /** No biometric hardware on this device at all. */
+    NO_HARDWARE,
+
+    /** Present but temporarily unusable — sensor busy, or locked out after failures. */
+    UNAVAILABLE,
+}
+
 /**
  * Thin wrapper over [BiometricPrompt].
  *
- * Only strong (class 3) and weak (class 2) biometrics are accepted; device credential is
- * deliberately *not* offered as a fallback, because the app's own PIN is the fallback and
- * the screen-lock PIN unlocking a hidden archive would defeat the point.
+ * Only class 2 / class 3 biometrics are accepted; device credential is deliberately *not*
+ * offered as a fallback, because the app's own PIN is the fallback and the screen-lock PIN
+ * unlocking a hidden archive would defeat the point.
  */
 object Biometrics {
 
     // Not `const`: `or` is a function call, which Kotlin will not fold into a constant.
+    // BIOMETRIC_WEAK's bit range already covers BIOMETRIC_STRONG, so this accepts either.
     private val ALLOWED =
         BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
 
-    /** True when the device has enrolled biometrics we can actually prompt for. */
-    fun isAvailable(context: Context): Boolean =
-        BiometricManager.from(context).canAuthenticate(ALLOWED) == BiometricManager.BIOMETRIC_SUCCESS
+    /**
+     * Distinguishes "this phone has no sensor" from "you haven't set up a fingerprint yet".
+     *
+     * The difference matters: one is permanent and one the user can fix in thirty seconds,
+     * and a greyed-out switch that explains neither is just baffling.
+     */
+    fun status(context: Context): BiometricStatus =
+        when (BiometricManager.from(context).canAuthenticate(ALLOWED)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> BiometricStatus.AVAILABLE
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricStatus.NONE_ENROLLED
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> BiometricStatus.NO_HARDWARE
+            else -> BiometricStatus.UNAVAILABLE
+        }
+
+    fun isAvailable(context: Context): Boolean = status(context) == BiometricStatus.AVAILABLE
 
     fun prompt(
         activity: FragmentActivity,

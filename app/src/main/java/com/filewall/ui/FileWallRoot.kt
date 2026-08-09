@@ -49,6 +49,7 @@ import com.filewall.ui.vault.MoveToFolderDialog
 import com.filewall.ui.vault.TextInputDialog
 import com.filewall.ui.vault.VaultScreen
 import com.filewall.ui.vault.VaultViewModel
+import com.filewall.ui.viewer.VaultPdfViewer
 import com.filewall.ui.viewer.VaultVideoPlayer
 import com.filewall.ui.viewer.ViewerScreen
 import kotlinx.coroutines.flow.first
@@ -169,12 +170,12 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     onUnlockHidden = { container.lock.unlock() },
                     onOpenItem = { item ->
                         viewerItem = item
-                        // Photos and video render in-app; anything else needs a viewer we
-                        // do not ship, so hand it over immediately rather than showing an
+                        // Photos, video and PDFs render in-app. Anything else needs a viewer
+                        // we do not ship, so hand it over immediately rather than showing an
                         // empty stage first.
-                        if (item.category == com.filewall.model.FileCategory.DOC ||
-                            item.category == com.filewall.model.FileCategory.OTHER
-                        ) {
+                        val opensExternally = item.category == com.filewall.model.FileCategory.OTHER ||
+                            (item.category == com.filewall.model.FileCategory.DOC && !item.isPdf)
+                        if (opensExternally) {
                             scope.launch { openExternally(context, container, item) }
                         }
                     },
@@ -211,6 +212,13 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     item = item,
                     repository = container.repository,
                     modifier = playerModifier,
+                )
+            },
+            pdfViewer = { pdfModifier ->
+                VaultPdfViewer(
+                    item = item,
+                    decryptToCache = { container.repository.materialisePreview(it) },
+                    modifier = pdfModifier,
                 )
             },
             onClose = { viewerItem = null },
