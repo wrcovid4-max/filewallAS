@@ -82,6 +82,10 @@ data class VaultItem(
     val thumbName: String?,
     @ColumnInfo(defaultValue = "0") val width: Int = 0,
     @ColumnInfo(defaultValue = "0") val height: Int = 0,
+    /** 0 = live; otherwise the epoch-millis the file was moved to Recently Deleted. */
+    @ColumnInfo(defaultValue = "0") val deletedAt: Long = 0,
+    /** True while the file sits in the Archive folder (still stored, hidden from the vault). */
+    @ColumnInfo(defaultValue = "0") val archived: Boolean = false,
 ) {
     val extension: String get() = name.substringAfterLast('.', "")
 
@@ -122,6 +126,9 @@ enum class SortField { DATE_ADDED, NAME, SIZE, TYPE }
 
 /** Which half of the Unlocked / Hidden pill is active. */
 enum class VaultFilter { UNLOCKED, HIDDEN }
+
+/** A non-folder listing the vault can show instead of the normal file grid. */
+enum class SpecialView { NONE, TRASH, ARCHIVE }
 
 /** Appearance choices in the Security tab. */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }

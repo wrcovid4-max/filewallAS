@@ -16,8 +16,27 @@ interface VaultDao {
 
     // ------------------------------------------------------------------ items
 
-    @Query("SELECT * FROM vault_items WHERE hidden = :hidden ORDER BY addedAt DESC")
+    // Live files only: nothing in the trash or the archive shows in the normal grid.
+    @Query("SELECT * FROM vault_items WHERE hidden = :hidden AND deletedAt = 0 AND archived = 0 ORDER BY addedAt DESC")
     fun observeItems(hidden: Boolean): Flow<List<VaultItem>>
+
+    @Query("SELECT * FROM vault_items WHERE hidden = :hidden AND deletedAt = 0 AND archived = 1 ORDER BY addedAt DESC")
+    fun observeArchive(hidden: Boolean): Flow<List<VaultItem>>
+
+    @Query("SELECT * FROM vault_items WHERE hidden = :hidden AND deletedAt > 0 ORDER BY deletedAt DESC")
+    fun observeTrash(hidden: Boolean): Flow<List<VaultItem>>
+
+    @Query("SELECT COUNT(*) FROM vault_items WHERE hidden = :hidden AND deletedAt = 0 AND archived = 1")
+    fun observeArchiveCount(hidden: Boolean): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM vault_items WHERE hidden = :hidden AND deletedAt > 0")
+    fun observeTrashCount(hidden: Boolean): Flow<Int>
+
+    @Query("SELECT * FROM vault_items WHERE hidden = :hidden AND deletedAt > 0")
+    suspend fun trashedItems(hidden: Boolean): List<VaultItem>
+
+    @Query("SELECT * FROM vault_items WHERE deletedAt > 0 AND deletedAt < :cutoff")
+    suspend fun expiredTrash(cutoff: Long): List<VaultItem>
 
     @Query("SELECT * FROM vault_items ORDER BY addedAt DESC")
     fun observeAllItems(): Flow<List<VaultItem>>
@@ -37,10 +56,12 @@ interface VaultDao {
     @Query("SELECT COUNT(*) FROM vault_items WHERE folderId = :folderId")
     fun observeFolderCount(folderId: String): Flow<Int>
 
-    @Query("SELECT folderId AS folderId, COUNT(*) AS count FROM vault_items WHERE folderId IS NOT NULL GROUP BY folderId")
+    @Query("SELECT folderId AS folderId, COUNT(*) AS count FROM vault_items WHERE folderId IS NOT NULL AND deletedAt = 0 AND archived = 0 GROUP BY folderId")
     fun observeFolderCounts(): Flow<List<FolderCount>>
 
-    @Query("SELECT category AS category, SUM(sizeBytes) AS bytes FROM vault_items GROUP BY category")
+    // Storage counts everything still stored, including the archive, but not the trash —
+    // trashed files are on their way out.
+    @Query("SELECT category AS category, SUM(sizeBytes) AS bytes FROM vault_items WHERE deletedAt = 0 GROUP BY category")
     fun observeCategoryTotals(): Flow<List<CategoryTotal>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -66,6 +87,16 @@ interface VaultDao {
 
     @Query("UPDATE vault_items SET name = :name WHERE id = :id")
     suspend fun renameItem(id: String, name: String)
+
+    // Trashing also clears the archive flag so a file lives in exactly one place at a time.
+    @Query("UPDATE vault_items SET deletedAt = :timestamp, archived = 0 WHERE id IN (:ids)")
+    suspend fun trashItems(ids: List<String>, timestamp: Long)
+
+    @Query("UPDATE vault_items SET deletedAt = 0, archived = 0 WHERE id IN (:ids)")
+    suspend fun restoreItems(ids: List<String>)
+
+    @Query("UPDATE vault_items SET archived = :archived WHERE id IN (:ids)")
+    suspend fun setItemsArchived(ids: List<String>, archived: Boolean)
 
     // ---------------------------------------------------------------- folders
 

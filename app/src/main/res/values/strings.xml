@@ -31,8 +31,25 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
     <string name="action_add_files">Add files</string>
+    <string name="action_more">More</string>
+    <string name="action_archive">Archive</string>
+    <string name="action_unarchive">Remove from Archive</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_delete_forever">Delete forever</string>
+    <string name="action_empty">Empty</string>
     <string name="empty_vault">Nothing here yet. Tap the upload button to bring files into the vault.</string>
     <string name="empty_search">No files match “%1$s”.</string>
+    <string name="empty_trash">Recently Deleted is empty.</string>
+    <string name="empty_archive">The Archive is empty. Archive files to tuck them away without deleting them.</string>
+
+    <!-- Recently Deleted &amp; Archive -->
+    <string name="recently_deleted">Recently Deleted</string>
+    <string name="archive">Archive</string>
+    <string name="dialog_delete_forever_title">Delete “%1$s” for good?</string>
+    <string name="dialog_delete_forever_title_n">Delete %1$d files for good?</string>
+    <string name="dialog_delete_forever_body">This permanently erases the file from your device. It cannot be undone.</string>
+    <string name="dialog_empty_trash_title">Empty Recently Deleted?</string>
+    <string name="dialog_empty_trash_body">This permanently erases everything in Recently Deleted. It cannot be undone.</string>
 
     <!-- Hidden vault -->
     <string name="unlock_hidden_vault">Unlock Hidden Vault</string>
@@ -148,7 +165,7 @@
     <string name="dialog_delete_all_title">Delete all folders?</string>
     <string name="dialog_delete_all_body">Every folder and the %1$d files inside them will be permanently erased. This cannot be undone.</string>
     <string name="dialog_delete_item_title">Delete “%1$s”?</string>
-    <string name="dialog_delete_item_body">This file will be permanently erased from the vault.</string>
+    <string name="dialog_delete_item_body">This file moves to Recently Deleted, where it stays for 30 days before it is erased for good. You can restore it until then.</string>
     <string name="dialog_delete_folder_title">Delete “%1$s”?</string>
     <string name="dialog_delete_folder_body">The folder and its %1$d files will be permanently erased.</string>
 

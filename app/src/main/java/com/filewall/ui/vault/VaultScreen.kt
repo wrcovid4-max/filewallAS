@@ -23,13 +23,19 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.filewall.R
 import com.filewall.data.crypto.PinManager
 import com.filewall.data.settings.VaultSettings
+import com.filewall.model.SpecialView
 import com.filewall.model.VaultFilter
 import com.filewall.model.VaultItem
 import com.filewall.ui.common.VaultFilterToggle
@@ -70,6 +77,10 @@ private sealed interface VaultDialog {
     data class DeleteFolder(val id: String, val name: String, val count: Int) : VaultDialog
     data class DeleteAllFolders(val fileCount: Int) : VaultDialog
     data class DeleteItems(val items: List<VaultItem>) : VaultDialog
+    data class DeleteForever(val items: List<VaultItem>) : VaultDialog
+    data object EmptyTrash : VaultDialog
+    data class RenameItem(val item: VaultItem) : VaultDialog
+    data class MoveItem(val item: VaultItem) : VaultDialog
 }
 
 @Composable
@@ -82,6 +93,7 @@ fun VaultScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val moveFolders by viewModel.moveFolders.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<VaultDialog?>(null) }
 
@@ -89,9 +101,15 @@ fun VaultScreen(
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris -> viewModel.import(uris) }
 
-    // Inside a folder, back climbs out before it leaves the tab.
-    BackHandler(enabled = state.openFolder != null || state.selectionMode) {
-        if (state.selectionMode) viewModel.clearSelection() else viewModel.openFolder(null)
+    // Back climbs out of selection, then out of a folder or a special view, before the tab.
+    BackHandler(
+        enabled = state.openFolder != null || state.selectionMode || state.special != SpecialView.NONE,
+    ) {
+        when {
+            state.selectionMode -> viewModel.clearSelection()
+            state.special != SpecialView.NONE -> viewModel.openSpecial(SpecialView.NONE)
+            else -> viewModel.openFolder(null)
+        }
     }
 
     Box(modifier.fillMaxSize()) {
@@ -125,18 +143,18 @@ fun VaultScreen(
             // While selecting, the selection bar *replaces* the toolbar rather than stacking
             // below it — two full-width bars was the "too much blank space" in the vault.
             if (state.selectionMode) {
+                val selectedItems = state.items.filter { it.id in state.selectedIds }
                 SelectionActions(
                     count = state.selectedIds.size,
+                    special = state.special,
                     inHidden = state.filter == VaultFilter.HIDDEN,
-                    onDelete = {
-                        dialog = VaultDialog.DeleteItems(state.items.filter { it.id in state.selectedIds })
-                    },
                     onToggleHidden = {
-                        viewModel.setHidden(
-                            state.items.filter { it.id in state.selectedIds },
-                            hidden = state.filter != VaultFilter.HIDDEN,
-                        )
+                        viewModel.setHidden(selectedItems, hidden = state.filter != VaultFilter.HIDDEN)
                     },
+                    onUnarchive = { viewModel.unarchive(selectedItems) },
+                    onRestore = { viewModel.restore(selectedItems) },
+                    onDelete = { dialog = VaultDialog.DeleteItems(selectedItems) },
+                    onDeleteForever = { dialog = VaultDialog.DeleteForever(selectedItems) },
                     onCancel = viewModel::clearSelection,
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
@@ -175,6 +193,45 @@ fun VaultScreen(
                 }
             }
 
+            if (state.special != SpecialView.NONE) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { viewModel.openSpecial(SpecialView.NONE) }) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = null)
+                    }
+                    Text(
+                        text = stringResourceSafe(
+                            if (state.special == SpecialView.TRASH) {
+                                R.string.recently_deleted
+                            } else {
+                                R.string.archive
+                            },
+                        ),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    if (state.special == SpecialView.TRASH && state.items.isNotEmpty() && !state.selectionMode) {
+                        TextButton(onClick = { dialog = VaultDialog.EmptyTrash }) {
+                            Icon(
+                                Icons.Filled.DeleteForever,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                stringResourceSafe(R.string.action_empty),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            }
+
             // During selection the filled bar is its own visual boundary, so the divider
             // would just add an empty band underneath it — a slim spacer keeps it tight.
             if (state.selectionMode) {
@@ -193,7 +250,9 @@ fun VaultScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                if (state.folders.isNotEmpty() || state.openFolder == null) {
+                if (state.special == SpecialView.NONE &&
+                    (state.folders.isNotEmpty() || state.openFolder == null)
+                ) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Row(
                             Modifier.fillMaxWidth(),
@@ -233,6 +292,22 @@ fun VaultScreen(
                             item {
                                 NewFolderCard(onClick = { dialog = VaultDialog.NewFolder })
                             }
+                            item {
+                                SpecialFolderCard(
+                                    title = stringResourceSafe(R.string.recently_deleted),
+                                    count = state.trashCount,
+                                    icon = Icons.Filled.Delete,
+                                    onClick = { viewModel.openSpecial(SpecialView.TRASH) },
+                                )
+                            }
+                            item {
+                                SpecialFolderCard(
+                                    title = stringResourceSafe(R.string.archive),
+                                    count = state.archiveCount,
+                                    icon = Icons.Filled.Archive,
+                                    onClick = { viewModel.openSpecial(SpecialView.ARCHIVE) },
+                                )
+                            }
                             items(state.folders, key = { it.folder.id }) { entry ->
                                 FolderCard(
                                     entry = entry,
@@ -263,21 +338,24 @@ fun VaultScreen(
                     }
                 }
 
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        stringResourceSafe(R.string.section_files),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                if (state.special == SpecialView.NONE) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            stringResourceSafe(R.string.section_files),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
 
                 if (state.items.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(
-                            text = if (state.query.isBlank()) {
-                                stringResourceSafe(R.string.empty_vault)
-                            } else {
-                                stringResourceSafe(R.string.empty_search, state.query)
+                            text = when {
+                                state.special == SpecialView.TRASH -> stringResourceSafe(R.string.empty_trash)
+                                state.special == SpecialView.ARCHIVE -> stringResourceSafe(R.string.empty_archive)
+                                state.query.isBlank() -> stringResourceSafe(R.string.empty_vault)
+                                else -> stringResourceSafe(R.string.empty_search, state.query)
                             },
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -294,6 +372,45 @@ fun VaultScreen(
                     val onClick = {
                         if (state.selectionMode) viewModel.toggleSelection(item.id) else onOpenItem(item)
                     }
+                    val menuActions = when (state.special) {
+                        SpecialView.NONE -> listOf(
+                            TileAction(stringResourceSafe(R.string.action_rename), Icons.Filled.Edit) {
+                                dialog = VaultDialog.RenameItem(item)
+                            },
+                            TileAction(stringResourceSafe(R.string.action_move), Icons.Filled.DriveFileMove) {
+                                dialog = VaultDialog.MoveItem(item)
+                            },
+                            TileAction(stringResourceSafe(R.string.action_archive), Icons.Filled.Archive) {
+                                viewModel.archive(listOf(item))
+                            },
+                            TileAction(stringResourceSafe(R.string.action_delete), Icons.Filled.Delete, destructive = true) {
+                                dialog = VaultDialog.DeleteItems(listOf(item))
+                            },
+                        )
+                        SpecialView.ARCHIVE -> listOf(
+                            TileAction(stringResourceSafe(R.string.action_unarchive), Icons.Filled.Unarchive) {
+                                viewModel.unarchive(listOf(item))
+                            },
+                            TileAction(stringResourceSafe(R.string.action_move), Icons.Filled.DriveFileMove) {
+                                dialog = VaultDialog.MoveItem(item)
+                            },
+                            TileAction(stringResourceSafe(R.string.action_delete), Icons.Filled.Delete, destructive = true) {
+                                dialog = VaultDialog.DeleteItems(listOf(item))
+                            },
+                        )
+                        SpecialView.TRASH -> listOf(
+                            TileAction(stringResourceSafe(R.string.action_restore), Icons.Filled.Restore) {
+                                viewModel.restore(listOf(item))
+                            },
+                            TileAction(
+                                stringResourceSafe(R.string.action_delete_forever),
+                                Icons.Filled.DeleteForever,
+                                destructive = true,
+                            ) {
+                                dialog = VaultDialog.DeleteForever(listOf(item))
+                            },
+                        )
+                    }
                     if (state.gridView) {
                         FileGridTile(
                             item = item,
@@ -302,6 +419,7 @@ fun VaultScreen(
                             selectionMode = state.selectionMode,
                             onClick = onClick,
                             onLongClick = { viewModel.toggleSelection(item.id) },
+                            menuActions = menuActions,
                         )
                     } else {
                         FileListRow(
@@ -311,13 +429,14 @@ fun VaultScreen(
                             selectionMode = state.selectionMode,
                             onClick = onClick,
                             onLongClick = { viewModel.toggleSelection(item.id) },
+                            menuActions = menuActions,
                         )
                     }
                 }
             }
         }
 
-        if (!state.needsPasscode) {
+        if (!state.needsPasscode && state.special == SpecialView.NONE) {
             FloatingActionButton(
                 onClick = { importLauncher.launch(arrayOf("*/*")) },
                 modifier = Modifier
@@ -336,6 +455,7 @@ fun VaultScreen(
 
     VaultDialogHost(
         dialog = dialog,
+        moveFolders = moveFolders,
         onDismiss = { dialog = null },
         viewModel = viewModel,
     )
@@ -344,14 +464,19 @@ fun VaultScreen(
 @Composable
 private fun SelectionActions(
     count: Int,
+    special: SpecialView,
     inHidden: Boolean,
-    onDelete: () -> Unit,
     onToggleHidden: () -> Unit,
+    onUnarchive: () -> Unit,
+    onRestore: () -> Unit,
+    onDelete: () -> Unit,
+    onDeleteForever: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // A compact, filled bar. Content is centred inside a tinted pill so it reads as one
     // deliberate control instead of a thin line of text floating in a tall, empty row.
+    // The primary action and the destructive one change with the view (normal/archive/trash).
     val onContainer = MaterialTheme.colorScheme.onSecondaryContainer
     Row(
         modifier = modifier
@@ -367,50 +492,117 @@ private fun SelectionActions(
             color = onContainer,
         )
         Spacer(Modifier.weight(1f))
-        TextButton(
-            onClick = onToggleHidden,
-            enabled = count > 0,
-            colors = ButtonDefaults.textButtonColors(contentColor = onContainer),
-        ) {
-            Icon(
-                if (inHidden) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                stringResourceSafe(if (inHidden) R.string.action_unhide else R.string.action_hide),
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-            )
+        when (special) {
+            SpecialView.TRASH -> {
+                PillLabelButton(Icons.Filled.Restore, stringResourceSafe(R.string.action_restore), onContainer, count > 0, onRestore)
+                PillIconButton(Icons.Filled.DeleteForever, stringResourceSafe(R.string.action_delete_forever), MaterialTheme.colorScheme.error, count > 0, onDeleteForever)
+            }
+            SpecialView.ARCHIVE -> {
+                PillLabelButton(Icons.Filled.Unarchive, stringResourceSafe(R.string.action_unarchive), onContainer, count > 0, onUnarchive)
+                PillIconButton(Icons.Filled.Delete, stringResourceSafe(R.string.action_delete), MaterialTheme.colorScheme.error, count > 0, onDelete)
+            }
+            SpecialView.NONE -> {
+                PillLabelButton(
+                    if (inHidden) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                    stringResourceSafe(if (inHidden) R.string.action_unhide else R.string.action_hide),
+                    onContainer,
+                    count > 0,
+                    onToggleHidden,
+                )
+                PillIconButton(Icons.Filled.Delete, stringResourceSafe(R.string.action_delete), MaterialTheme.colorScheme.error, count > 0, onDelete)
+            }
         }
-        IconButton(onClick = onDelete, enabled = count > 0, modifier = Modifier.size(40.dp)) {
-            Icon(
-                Icons.Filled.Delete,
-                contentDescription = stringResourceSafe(R.string.action_delete),
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        IconButton(onClick = onCancel, modifier = Modifier.size(40.dp)) {
-            Icon(
-                Icons.Filled.Close,
-                contentDescription = stringResourceSafe(R.string.action_cancel),
-                tint = onContainer,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        PillIconButton(Icons.Filled.Close, stringResourceSafe(R.string.action_cancel), onContainer, true, onCancel)
+    }
+}
+
+@Composable
+private fun PillLabelButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: androidx.compose.ui.graphics.Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.textButtonColors(contentColor = tint),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+    }
+}
+
+@Composable
+private fun PillIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    tint: androidx.compose.ui.graphics.Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(40.dp)) {
+        Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(20.dp))
     }
 }
 
 @Composable
 private fun VaultDialogHost(
     dialog: VaultDialog?,
+    moveFolders: List<com.filewall.model.FolderWithCount>,
     onDismiss: () -> Unit,
     viewModel: VaultViewModel,
 ) {
     when (dialog) {
         null -> Unit
+
+        is VaultDialog.RenameItem -> TextInputDialog(
+            title = stringResourceSafe(R.string.action_rename),
+            initialValue = dialog.item.name,
+            onDismiss = onDismiss,
+            onConfirm = { name ->
+                viewModel.rename(dialog.item, name)
+                onDismiss()
+            },
+        )
+
+        is VaultDialog.MoveItem -> MoveToFolderDialog(
+            folders = moveFolders,
+            currentFolderId = dialog.item.folderId,
+            onDismiss = onDismiss,
+            onPick = { folderId ->
+                viewModel.move(dialog.item, folderId)
+                onDismiss()
+            },
+        )
+
+        is VaultDialog.DeleteForever -> ConfirmDialog(
+            title = if (dialog.items.size == 1) {
+                stringResourceSafe(R.string.dialog_delete_forever_title, dialog.items.first().name)
+            } else {
+                stringResourceSafe(R.string.dialog_delete_forever_title_n, dialog.items.size)
+            },
+            body = stringResourceSafe(R.string.dialog_delete_forever_body),
+            confirmLabel = stringResourceSafe(R.string.action_delete_forever),
+            onDismiss = onDismiss,
+            onConfirm = {
+                viewModel.purge(dialog.items)
+                onDismiss()
+            },
+        )
+
+        is VaultDialog.EmptyTrash -> ConfirmDialog(
+            title = stringResourceSafe(R.string.dialog_empty_trash_title),
+            body = stringResourceSafe(R.string.dialog_empty_trash_body),
+            confirmLabel = stringResourceSafe(R.string.action_empty),
+            onDismiss = onDismiss,
+            onConfirm = {
+                viewModel.emptyTrash()
+                onDismiss()
+            },
+        )
 
         is VaultDialog.NewFolder -> TextInputDialog(
             title = stringResourceSafe(R.string.dialog_new_folder),

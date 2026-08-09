@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.filewall.R
@@ -200,6 +201,58 @@ fun NewFolderCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+/** A system tile for Recently Deleted / Archive, sized to match the folder cards. */
+@Composable
+fun SpecialFolderCard(
+    title: String,
+    count: Int,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.size(width = 150.dp, height = 130.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        onClick = onClick,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Column(
+                Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(40.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (count > 0) {
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(10.dp),
+                )
+            }
+        }
+    }
+}
+
 /** A tinted folder tile with its overflow menu (Rename / Colour / Delete). */
 @Composable
 fun FolderCard(
@@ -303,6 +356,66 @@ fun FolderCard(
     }
 }
 
+/** One entry in a file's 3-dot overflow menu. */
+data class TileAction(
+    val label: String,
+    val icon: ImageVector,
+    val destructive: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+/** The 3-dot button plus its dropdown, used on both the grid tile and the list row. */
+@Composable
+private fun TileOverflow(
+    actions: List<TileAction>,
+    modifier: Modifier = Modifier,
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    if (actions.isEmpty()) return
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(36.dp)) {
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = stringResourceSafe(R.string.action_more),
+                tint = iconTint,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            actions.forEach { action ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            action.label,
+                            color = if (action.destructive) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            action.icon,
+                            contentDescription = null,
+                            tint = if (action.destructive) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    },
+                    onClick = {
+                        open = false
+                        action.onClick()
+                    },
+                )
+            }
+        }
+    }
+}
+
 /** Grid tile: square preview, name, type badge, and a selection ring when selecting. */
 @Composable
 fun FileGridTile(
@@ -313,6 +426,7 @@ fun FileGridTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    menuActions: List<TileAction> = emptyList(),
 ) {
     Column(
         modifier = modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -325,6 +439,18 @@ fun FileGridTile(
                 .clip(MaterialTheme.shapes.medium),
         ) {
             ThumbnailImage(item = item, store = thumbnails, modifier = Modifier.fillMaxSize())
+
+            if (!selectionMode && menuActions.isNotEmpty()) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)),
+                ) {
+                    TileOverflow(actions = menuActions, iconTint = androidx.compose.ui.graphics.Color.White)
+                }
+            }
 
             if (selectionMode) {
                 Box(
@@ -378,6 +504,7 @@ fun FileListRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    menuActions: List<TileAction> = emptyList(),
 ) {
     Row(
         modifier = modifier
@@ -422,6 +549,10 @@ fun FileListRow(
             )
         } else {
             TypeBadge(item.category)
+            if (menuActions.isNotEmpty()) {
+                Spacer(Modifier.width(4.dp))
+                TileOverflow(actions = menuActions)
+            }
         }
     }
 }

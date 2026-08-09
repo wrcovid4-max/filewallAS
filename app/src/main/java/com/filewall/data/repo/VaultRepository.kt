@@ -42,6 +42,14 @@ class VaultRepository(
 
     fun observeItems(hidden: Boolean): Flow<List<VaultItem>> = dao.observeItems(hidden)
 
+    fun observeArchive(hidden: Boolean): Flow<List<VaultItem>> = dao.observeArchive(hidden)
+
+    fun observeTrash(hidden: Boolean): Flow<List<VaultItem>> = dao.observeTrash(hidden)
+
+    fun observeArchiveCount(hidden: Boolean): Flow<Int> = dao.observeArchiveCount(hidden)
+
+    fun observeTrashCount(hidden: Boolean): Flow<Int> = dao.observeTrashCount(hidden)
+
     fun observeItem(id: String): Flow<VaultItem?> = dao.observeItem(id)
 
     fun observeFolders(hidden: Boolean): Flow<List<FolderWithCount>> =
@@ -280,12 +288,40 @@ class VaultRepository(
         dao.setItemsHidden(ids, hidden)
     }
 
+    /**
+     * Soft delete: moves files to Recently Deleted. The ciphertext stays on disk so a
+     * restore is possible; [purge] and [purgeExpiredTrash] are what actually erase it.
+     */
     suspend fun delete(items: List<VaultItem>) = withContext(Dispatchers.IO) {
+        dao.trashItems(items.map { it.id }, System.currentTimeMillis())
+    }
+
+    /** Permanently erases the blobs, thumbnails and rows — the point of no return. */
+    suspend fun purge(items: List<VaultItem>) = withContext(Dispatchers.IO) {
         items.forEach { item ->
             File(blobDir, item.blobName).delete()
             item.thumbName?.let { File(thumbDir, it).delete() }
         }
         dao.deleteItemsByIds(items.map { it.id })
+    }
+
+    suspend fun restore(items: List<VaultItem>) = withContext(Dispatchers.IO) {
+        dao.restoreItems(items.map { it.id })
+    }
+
+    suspend fun setArchived(items: List<VaultItem>, archived: Boolean) = withContext(Dispatchers.IO) {
+        dao.setItemsArchived(items.map { it.id }, archived)
+    }
+
+    /** Empties Recently Deleted for one side of the vault. */
+    suspend fun emptyTrash(hidden: Boolean) = withContext(Dispatchers.IO) {
+        purge(dao.trashedItems(hidden))
+    }
+
+    /** Called on unlock/launch: erases anything that has sat in the trash past [maxAgeMs]. */
+    suspend fun purgeExpiredTrash(maxAgeMs: Long) = withContext(Dispatchers.IO) {
+        val expired = dao.expiredTrash(System.currentTimeMillis() - maxAgeMs)
+        if (expired.isNotEmpty()) purge(expired)
     }
 
     suspend fun createFolder(name: String, colorIndex: Int, hidden: Boolean): VaultFolder =
@@ -308,16 +344,16 @@ class VaultRepository(
         dao.recolorFolder(id, colorIndex)
     }
 
-    /** Deletes a folder and everything inside it. */
+    /** Deletes a folder and everything inside it, for good. */
     suspend fun deleteFolder(id: String) = withContext(Dispatchers.IO) {
-        delete(dao.itemsInFolder(id))
+        purge(dao.itemsInFolder(id))
         dao.deleteFolderRow(id)
     }
 
     /** The toolbar's "Delete All": every folder on this side of the vault, contents included. */
     suspend fun deleteAllFolders(hidden: Boolean) = withContext(Dispatchers.IO) {
         dao.foldersFor(hidden).forEach { folder ->
-            delete(dao.itemsInFolder(folder.id))
+            purge(dao.itemsInFolder(folder.id))
         }
         dao.deleteFoldersRows(hidden)
     }
