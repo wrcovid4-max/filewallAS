@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -326,18 +327,22 @@ private fun DetailRow(label: String, value: String) {
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.Top,
     ) {
+        // Label takes only what it needs; the value gets the rest and wraps inside it.
+        // Previously the value had no width bound, so a long filename ran off the right
+        // edge and its last characters (".pdf") were clipped.
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(min = 64.dp),
         )
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(16.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = androidx.compose.ui.text.style.TextAlign.End,
-            modifier = Modifier.padding(start = 16.dp),
+            modifier = Modifier.weight(1f),
         )
     }
 }
