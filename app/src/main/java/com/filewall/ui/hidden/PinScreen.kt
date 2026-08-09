@@ -3,6 +3,8 @@ package com.filewall.ui.hidden
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,17 +73,20 @@ fun PinScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Center,
+            // Scrollable so the bottom row (backspace / 0 / confirm) can never be pushed
+            // off-screen on shorter viewports — that was the "missing keys" bug.
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = Icons.Filled.Lock,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(40.dp),
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(14.dp))
 
         Text(
             text = stringResourceSafe(
@@ -109,7 +114,7 @@ fun PinScreen(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(20.dp))
         PinDots(filled = entry.length, error = errorMessage != null)
 
         if (errorMessage != null) {
@@ -122,7 +127,7 @@ fun PinScreen(
             )
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(22.dp))
         PinPad(
             onDigit = { digit ->
                 if (entry.length < PinManager.PIN_LENGTH) entry += digit
@@ -179,10 +184,10 @@ private fun PinPad(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         listOf("123", "456", "789").forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { digit ->
                     PinKey(modifier = Modifier.weight(1f), onClick = { onDigit(digit) }) {
                         Text(
@@ -194,7 +199,7 @@ private fun PinPad(
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PinKey(modifier = Modifier.weight(1f), onClick = onBackspace) {
                 Icon(
                     Icons.Filled.Backspace,
@@ -237,8 +242,8 @@ private fun PinKey(
 ) {
     Box(
         modifier = modifier
-            .height(66.dp)
-            .clip(RoundedCornerShape(33.dp))
+            .height(56.dp)
+            .clip(RoundedCornerShape(28.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,

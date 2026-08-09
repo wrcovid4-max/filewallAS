@@ -100,56 +100,13 @@ fun ViewerScreen(
     }
 
     Surface(color = ViewerPurple, modifier = modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize()) {
-            // ---------------------------------------------------------- stage
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .pointerInput(item.id, item.category) {
-                        if (item.category != FileCategory.PHOTO) return@pointerInput
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 6f)
-                            if (scale > 1f) {
-                                offsetX += pan.x
-                                offsetY += pan.y
-                            } else {
-                                offsetX = 0f
-                                offsetY = 0f
-                            }
-                        }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                when {
-                    loading -> CircularProgressIndicator(color = Color.White)
-
-                    image != null -> Image(
-                        bitmap = image!!,
-                        contentDescription = item.name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer(
-                                scaleX = animatedScale,
-                                scaleY = animatedScale,
-                                translationX = offsetX,
-                                translationY = offsetY,
-                            ),
-                    )
-
-                    item.category == FileCategory.VIDEO -> videoPlayer(Modifier.fillMaxWidth())
-
-                    item.isPdf -> pdfViewer(Modifier.fillMaxSize())
-
-                    else -> NoPreview(onOpenExternally)
-                }
-            }
-
+        // A Column, not a Box overlay: the top bar, the content, and the details sheet are
+        // siblings stacked top-to-bottom, so the sheet can never sit *on top of* the content
+        // or the controls. Toggling fullscreen just removes the bar and sheet, and the
+        // content expands to fill the freed space.
+        Column(Modifier.fillMaxSize()) {
             // -------------------------------------------------------- top bar
-            AnimatedVisibility(
-                visible = detailsVisible,
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
+            AnimatedVisibility(visible = detailsVisible) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -183,45 +140,86 @@ fun ViewerScreen(
                 }
             }
 
-            // ------------------------------------------------- stage controls
-            // Always bottom-right; when the details sheet is up, float above it instead of
-            // sitting dead-centre over the content (which is what overlapped the preview text).
-            Row(
+            // ---------------------------------------------------------- stage
+            Box(
                 Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = if (detailsVisible) 280.dp else 28.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (item.category == FileCategory.PHOTO) {
-                    StageButton(
-                        icon = Icons.Filled.ZoomIn,
-                        description = stringResourceSafe(R.string.zoom),
-                        onClick = {
-                            // Tap-to-zoom cycles rather than toggling, so 2x stays one-handed.
-                            scale = when {
-                                scale < 1.5f -> 2f
-                                scale < 2.5f -> 3f
-                                else -> 1f
-                            }
-                            if (scale == 1f) {
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .pointerInput(item.id, item.category) {
+                        if (item.category != FileCategory.PHOTO) return@pointerInput
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 6f)
+                            if (scale > 1f) {
+                                offsetX += pan.x
+                                offsetY += pan.y
+                            } else {
                                 offsetX = 0f
                                 offsetY = 0f
                             }
-                        },
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                when {
+                    loading -> CircularProgressIndicator(color = Color.White)
+
+                    image != null -> Image(
+                        bitmap = image!!,
+                        contentDescription = item.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = animatedScale,
+                                scaleY = animatedScale,
+                                translationX = offsetX,
+                                translationY = offsetY,
+                            ),
+                    )
+
+                    item.category == FileCategory.VIDEO -> videoPlayer(Modifier.fillMaxSize())
+
+                    item.isPdf -> pdfViewer(Modifier.fillMaxSize())
+
+                    else -> NoPreview(onOpenExternally)
+                }
+
+                // Controls live inside the stage box, pinned bottom-right — always above the
+                // details sheet because the sheet is a separate row below this whole box.
+                Row(
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (item.category == FileCategory.PHOTO) {
+                        StageButton(
+                            icon = Icons.Filled.ZoomIn,
+                            description = stringResourceSafe(R.string.zoom),
+                            onClick = {
+                                // Tap-to-zoom cycles rather than toggling, so 2x stays one-handed.
+                                scale = when {
+                                    scale < 1.5f -> 2f
+                                    scale < 2.5f -> 3f
+                                    else -> 1f
+                                }
+                                if (scale == 1f) {
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                }
+                            },
+                        )
+                    }
+                    StageButton(
+                        icon = if (detailsVisible) Icons.Filled.Fullscreen else Icons.Filled.FullscreenExit,
+                        description = stringResourceSafe(R.string.fullscreen),
+                        onClick = { detailsVisible = !detailsVisible },
                     )
                 }
-                StageButton(
-                    icon = if (detailsVisible) Icons.Filled.Fullscreen else Icons.Filled.FullscreenExit,
-                    description = stringResourceSafe(R.string.fullscreen),
-                    onClick = { detailsVisible = !detailsVisible },
-                )
             }
 
             // --------------------------------------------------- details card
-            AnimatedVisibility(
-                visible = detailsVisible,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            ) {
+            AnimatedVisibility(visible = detailsVisible) {
                 ItemDetailsCard(
                     item = item,
                     onExport = onExport,
