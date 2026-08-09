@@ -292,23 +292,12 @@ fun VaultScreen(
                             item {
                                 NewFolderCard(onClick = { dialog = VaultDialog.NewFolder })
                             }
-                            item {
-                                SpecialFolderCard(
-                                    title = stringResourceSafe(R.string.recently_deleted),
-                                    count = state.trashCount,
-                                    icon = Icons.Filled.Delete,
-                                    onClick = { viewModel.openSpecial(SpecialView.TRASH) },
-                                )
-                            }
-                            item {
-                                SpecialFolderCard(
-                                    title = stringResourceSafe(R.string.archive),
-                                    count = state.archiveCount,
-                                    icon = Icons.Filled.Archive,
-                                    onClick = { viewModel.openSpecial(SpecialView.ARCHIVE) },
-                                )
-                            }
                             items(state.folders, key = { it.folder.id }) { entry ->
+                                // Cover = a file in this folder that actually has a preview
+                                // (newest first); doc-only folders keep the tinted icon.
+                                val cover = state.items.firstOrNull {
+                                    it.folderId == entry.folder.id && it.thumbName != null
+                                }
                                 FolderCard(
                                     entry = entry,
                                     onOpen = { viewModel.openFolder(entry.folder.id) },
@@ -325,6 +314,25 @@ fun VaultScreen(
                                             entry.itemCount,
                                         )
                                     },
+                                    coverItem = cover,
+                                    thumbnails = viewModel.thumbnails,
+                                )
+                            }
+                            // The system folders sit at the far end, after the user's own folders.
+                            item {
+                                SpecialFolderCard(
+                                    title = stringResourceSafe(R.string.recently_deleted),
+                                    count = state.trashCount,
+                                    icon = Icons.Filled.Delete,
+                                    onClick = { viewModel.openSpecial(SpecialView.TRASH) },
+                                )
+                            }
+                            item {
+                                SpecialFolderCard(
+                                    title = stringResourceSafe(R.string.archive),
+                                    count = state.archiveCount,
+                                    icon = Icons.Filled.Archive,
+                                    onClick = { viewModel.openSpecial(SpecialView.ARCHIVE) },
                                 )
                             }
                         }

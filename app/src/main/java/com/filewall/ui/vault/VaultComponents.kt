@@ -51,6 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -170,11 +172,15 @@ private fun SortField.label(): String = stringResourceSafe(
     },
 )
 
+// Folder tiles are deliberately compact so more fit across the row.
+private val FolderCardWidth = 124.dp
+private val FolderCardHeight = 112.dp
+
 /** The dashed "+ New Folder" tile that opens the folder grid. */
 @Composable
 fun NewFolderCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.size(width = 150.dp, height = 130.dp),
+        modifier = modifier.size(width = FolderCardWidth, height = FolderCardHeight),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -189,12 +195,12 @@ fun NewFolderCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
                 Icons.Filled.Add,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(28.dp),
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 stringResourceSafe(R.string.new_folder),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -211,7 +217,7 @@ fun SpecialFolderCard(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.size(width = 150.dp, height = 130.dp),
+        modifier = modifier.size(width = FolderCardWidth, height = FolderCardHeight),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -228,12 +234,12 @@ fun SpecialFolderCard(
                     icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(30.dp),
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -253,7 +259,10 @@ fun SpecialFolderCard(
     }
 }
 
-/** A tinted folder tile with its overflow menu (Rename / Colour / Delete). */
+/**
+ * A folder tile. When the folder holds a previewable file it shows that file's thumbnail as
+ * a cover (like the home-page tiles); otherwise it falls back to the tinted folder icon.
+ */
 @Composable
 fun FolderCard(
     entry: FolderWithCount,
@@ -262,25 +271,45 @@ fun FolderCard(
     onRecolor: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    coverItem: VaultItem? = null,
+    thumbnails: ThumbnailStore? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val index = entry.folder.colorIndex
+    val hasCover = coverItem != null && thumbnails != null
 
     Card(
-        modifier = modifier.size(width = 150.dp, height = 130.dp),
+        modifier = modifier.size(width = FolderCardWidth, height = FolderCardHeight),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = FolderPalette.container(index)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (hasCover) MaterialTheme.colorScheme.surfaceContainerHighest else FolderPalette.container(index),
+        ),
         border = BorderStroke(1.5.dp, FolderPalette.outline(index)),
         onClick = onOpen,
     ) {
         Box(Modifier.fillMaxSize()) {
+            if (hasCover) {
+                ThumbnailImage(item = coverItem!!, store = thumbnails!!, modifier = Modifier.fillMaxSize())
+                // Bottom scrim so the folder name stays readable over any image.
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                            ),
+                        ),
+                )
+            }
+
+            val overflowTint = if (hasCover) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
             Box(Modifier.align(Alignment.TopEnd)) {
-                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Filled.MoreVert,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
+                        contentDescription = stringResourceSafe(R.string.action_more),
+                        tint = overflowTint,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -320,36 +349,50 @@ fun FolderCard(
                 }
             }
 
-            Column(
-                Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Icon(
-                    Icons.Filled.Folder,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(40.dp),
-                )
-                Spacer(Modifier.height(8.dp))
+            if (hasCover) {
+                // Name sits along the bottom, over the scrim.
                 Text(
                     text = entry.folder.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 10.dp, end = 34.dp, bottom = 8.dp),
                 )
+            } else {
+                Column(
+                    Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        Icons.Filled.Folder,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(30.dp),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = entry.folder.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             if (entry.itemCount > 0) {
                 Text(
                     text = "${entry.itemCount}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (hasCover) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(10.dp),
+                        .padding(8.dp),
                 )
             }
         }
