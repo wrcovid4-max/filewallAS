@@ -69,6 +69,9 @@
     <string name="disable_passcode_fallback">Disable Passcode Fallback</string>
     <string name="disable_passcode_fallback_desc">Only allow biometrics to unlock hidden archive. Disables PIN code fallback when biometrics are enabled.</string>
     <string name="change_passcode">Change Passcode PIN</string>
+    <string name="lock_now">Lock Hidden Folder Now</string>
+    <string name="lock_now_already">Hidden Folder Is Locked</string>
+    <string name="lock_now_done">Hidden folder locked</string>
     <string name="appearance">Appearance</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>

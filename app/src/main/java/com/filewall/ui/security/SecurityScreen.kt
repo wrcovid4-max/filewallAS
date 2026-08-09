@@ -194,6 +194,30 @@ fun SecurityScreen(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
+
+                Spacer(Modifier.height(10.dp))
+
+                // One-tap panic close: seals the hidden archive and wipes anything decrypted
+                // to disk right now, without waiting for the idle auto-lock timer.
+                Button(
+                    onClick = { viewModel.lockNow() },
+                    enabled = state.hiddenUnlocked,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    Icon(Icons.Filled.Lock, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResourceSafe(
+                            if (state.hiddenUnlocked) R.string.lock_now else R.string.lock_now_already,
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
             }
         }
 
