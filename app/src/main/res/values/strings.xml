@@ -132,6 +132,7 @@
     <string name="fullscreen">Fullscreen</string>
     <string name="open_externally">Open with…</string>
     <string name="cannot_preview">No in-app preview for this file type. Use Export or Open with.</string>
+    <string name="pdf_failed">Couldn\'t open this PDF.</string>
 
     <!-- Dialogs -->
     <string name="dialog_new_folder">New folder</string>
