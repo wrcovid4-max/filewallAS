@@ -50,10 +50,12 @@ import com.filewall.util.formatBytes
 /** The persistent "FileWall / 269.4 MB USED" masthead every tab sits under. */
 @Composable
 fun VaultHeader(totalBytes: Long, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp)) {
+    Column(modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) {
         Text(
             text = stringResourceSafe(R.string.app_name),
-            style = MaterialTheme.typography.displaySmall,
+            // headlineMedium rather than displaySmall: the masthead was the biggest driver
+            // of the "everything is huge" feel.
+            style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(2.dp))
@@ -77,7 +79,7 @@ fun SectionCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Column(Modifier.padding(20.dp), content = content)
+        Column(Modifier.padding(16.dp), content = content)
     }
 }
 

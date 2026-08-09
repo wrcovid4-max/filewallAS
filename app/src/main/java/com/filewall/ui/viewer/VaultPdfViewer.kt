@@ -69,16 +69,22 @@ fun VaultPdfViewer(
                     file,
                     ParcelFileDescriptor.MODE_READ_ONLY,
                 )
-                PdfState.Ready(PdfRenderer(descriptor), file)
+                val renderer = PdfRenderer(descriptor)
+                // Read pageCount now, while we own the renderer on a background thread, so
+                // composition never has to call into it (and never touches it after close).
+                PdfState.Ready(renderer, file, renderer.pageCount)
             }.getOrElse { PdfState.Failed }
         }
     }
 
-    // Close the renderer (and its descriptor) when we leave the screen or switch document.
-    androidx.compose.runtime.DisposableEffect(rendererState) {
-        onDispose {
-            (rendererState as? PdfState.Ready)?.renderer?.let { runCatching { it.close() } }
-        }
+    val ready = rendererState as? PdfState.Ready
+    // Key on the renderer *instance*, and capture it into a local so the cleanup closes
+    // exactly the renderer this effect opened with — never whatever the state later becomes.
+    // (Keying on the state and re-reading it in onDispose closed the fresh renderer the
+    // instant loading finished, which then crashed composition.)
+    androidx.compose.runtime.DisposableEffect(ready?.renderer) {
+        val owned = ready?.renderer
+        onDispose { owned?.let { runCatching { it.close() } } }
     }
 
     Box(modifier.fillMaxSize().background(Color(0xFF202020)), contentAlignment = Alignment.Center) {
@@ -97,7 +103,7 @@ fun VaultPdfViewer(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 12.dp, horizontal = 8.dp),
             ) {
-                items((0 until state.renderer.pageCount).toList()) { index ->
+                items(state.pageCount) { index ->
                     PdfPage(renderer = state.renderer, index = index, widthPx = targetWidthPx)
                     Spacer(Modifier.height(10.dp))
                 }
@@ -152,5 +158,5 @@ private fun PdfPage(renderer: PdfRenderer, index: Int, widthPx: Int) {
 private sealed interface PdfState {
     data object Loading : PdfState
     data object Failed : PdfState
-    data class Ready(val renderer: PdfRenderer, val file: File) : PdfState
+    data class Ready(val renderer: PdfRenderer, val file: File, val pageCount: Int) : PdfState
 }

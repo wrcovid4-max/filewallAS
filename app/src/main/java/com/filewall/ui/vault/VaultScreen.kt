@@ -118,21 +118,8 @@ fun VaultScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            VaultToolbar(
-                itemCount = state.visibleCount,
-                sortField = state.sortField,
-                sortAscending = state.sortAscending,
-                gridView = state.gridView,
-                selectionMode = state.selectionMode,
-                onSortField = { viewModel.setSortField(it) },
-                onToggleDirection = { viewModel.toggleSortDirection() },
-                onToggleView = { viewModel.toggleViewMode() },
-                onToggleSelection = {
-                    if (state.selectionMode) viewModel.clearSelection() else viewModel.selectAll()
-                },
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
-
+            // While selecting, the selection bar *replaces* the toolbar rather than stacking
+            // below it — two full-width bars was the "too much blank space" in the vault.
             if (state.selectionMode) {
                 SelectionActions(
                     count = state.selectedIds.size,
@@ -147,7 +134,22 @@ fun VaultScreen(
                         )
                     },
                     onCancel = viewModel::clearSelection,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            } else {
+                VaultToolbar(
+                    itemCount = state.visibleCount,
+                    sortField = state.sortField,
+                    sortAscending = state.sortAscending,
+                    gridView = state.gridView,
+                    selectionMode = state.selectionMode,
+                    onSortField = { viewModel.setSortField(it) },
+                    onToggleDirection = { viewModel.toggleSortDirection() },
+                    onToggleView = { viewModel.toggleViewMode() },
+                    onToggleSelection = {
+                        if (state.selectionMode) viewModel.clearSelection() else viewModel.selectAll()
+                    },
+                    modifier = Modifier.padding(horizontal = 20.dp),
                 )
             }
 
