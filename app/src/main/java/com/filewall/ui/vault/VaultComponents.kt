@@ -84,52 +84,67 @@ fun VaultToolbar(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = stringResourceSafe(R.string.item_count, itemCount),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.width(12.dp))
+        // Left group flexes: the trailing icon buttons are laid out at their fixed size
+        // first, and whatever width is left goes here. The sort label truncates before it
+        // can ever push the "select" button off the right edge (the clipping we saw).
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResourceSafe(R.string.item_count, itemCount),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+            Spacer(Modifier.width(8.dp))
 
-        Box {
-            TextButton(onClick = { sortMenuOpen = true }) {
-                Icon(Icons.Filled.Sort, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(6.dp))
-                Text(sortField.label(), style = MaterialTheme.typography.titleMedium)
-            }
-            DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
-                SortField.entries.forEach { field ->
-                    DropdownMenuItem(
-                        text = { Text(field.label()) },
-                        trailingIcon = {
-                            if (field == sortField) Icon(Icons.Filled.Check, null)
-                        },
-                        onClick = {
-                            onSortField(field)
-                            sortMenuOpen = false
-                        },
+            Box(Modifier.weight(1f, fill = false)) {
+                TextButton(onClick = { sortMenuOpen = true }) {
+                    Icon(Icons.Filled.Sort, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        sortField.label(),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                }
+                DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
+                    SortField.entries.forEach { field ->
+                        DropdownMenuItem(
+                            text = { Text(field.label()) },
+                            trailingIcon = {
+                                if (field == sortField) Icon(Icons.Filled.Check, null)
+                            },
+                            onClick = {
+                                onSortField(field)
+                                sortMenuOpen = false
+                            },
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.weight(1f))
-
-        IconButton(onClick = onToggleDirection) {
+        // Compact trailing controls (40dp taps) so all three always fit on narrow screens.
+        IconButton(onClick = onToggleDirection, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = if (sortAscending) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
             )
         }
-        IconButton(onClick = onToggleView) {
+        IconButton(onClick = onToggleView, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = if (gridView) Icons.Filled.ViewList else Icons.Filled.GridView,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp),
             )
         }
-        IconButton(onClick = onToggleSelection) {
+        IconButton(onClick = onToggleSelection, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = if (selectionMode) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                 contentDescription = null,
@@ -138,6 +153,7 @@ fun VaultToolbar(
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
+                modifier = Modifier.size(22.dp),
             )
         }
     }
