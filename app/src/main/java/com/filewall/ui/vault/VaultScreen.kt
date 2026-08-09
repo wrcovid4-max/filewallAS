@@ -3,6 +3,7 @@ package com.filewall.ui.vault
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,11 +24,13 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -171,10 +175,16 @@ fun VaultScreen(
                 }
             }
 
-            HorizontalDivider(
-                Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outline,
-            )
+            // During selection the filled bar is its own visual boundary, so the divider
+            // would just add an empty band underneath it — a slim spacer keeps it tight.
+            if (state.selectionMode) {
+                Spacer(Modifier.height(10.dp))
+            } else {
+                HorizontalDivider(
+                    Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(if (state.gridView) 3 else 1),
@@ -340,22 +350,56 @@ private fun SelectionActions(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    // A compact, filled bar. Content is centred inside a tinted pill so it reads as one
+    // deliberate control instead of a thin line of text floating in a tall, empty row.
+    val onContainer = MaterialTheme.colorScheme.onSecondaryContainer
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
             text = "$count selected",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.titleSmall,
+            color = onContainer,
         )
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = onToggleHidden, enabled = count > 0) {
-            Icon(if (inHidden) Icons.Filled.LockOpen else Icons.Filled.Lock, contentDescription = null)
+        TextButton(
+            onClick = onToggleHidden,
+            enabled = count > 0,
+            colors = ButtonDefaults.textButtonColors(contentColor = onContainer),
+        ) {
+            Icon(
+                if (inHidden) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
             Spacer(Modifier.width(6.dp))
-            Text(stringResourceSafe(if (inHidden) R.string.action_unhide else R.string.action_hide))
+            Text(
+                stringResourceSafe(if (inHidden) R.string.action_unhide else R.string.action_hide),
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+            )
         }
-        TextButton(onClick = onDelete, enabled = count > 0) {
-            Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+        IconButton(onClick = onDelete, enabled = count > 0, modifier = Modifier.size(40.dp)) {
+            Icon(
+                Icons.Filled.Delete,
+                contentDescription = stringResourceSafe(R.string.action_delete),
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp),
+            )
         }
-        TextButton(onClick = onCancel) { Text(stringResourceSafe(R.string.action_cancel)) }
+        IconButton(onClick = onCancel, modifier = Modifier.size(40.dp)) {
+            Icon(
+                Icons.Filled.Close,
+                contentDescription = stringResourceSafe(R.string.action_cancel),
+                tint = onContainer,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 
