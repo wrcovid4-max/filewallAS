@@ -78,6 +78,16 @@ A private vault for photos, videos and documents. Encryption keys never leave th
 No account, no server, no sign-up. Cloud backup uploads a blob Apple cannot read. There is
 a second "hidden" vault behind biometrics, and a watch companion.
 
+Files move through three lifecycle states inside each vault side:
+- **Live** — the normal grid.
+- **Archived** — tucked out of the main grid and out of folder counts, still stored and
+  still counted in storage totals. A user parks things here without deleting them.
+- **Recently Deleted** — a soft-delete trash. Deleting a file sends it here; it is
+  recoverable for 30 days, then purged for good. The ciphertext stays on disk until the
+  purge, so Restore is lossless. "Empty" and "Delete Forever" erase on demand; expired
+  items are swept on launch. A file is in exactly one state at a time, per vault side, and
+  Hidden keeps its own separate Recently Deleted and Archive so nothing leaks across.
+
 ## Project structure
 
   FileWallKit/       Swift package. Crypto, storage, models, sync. No UI. Must build and
@@ -127,6 +137,18 @@ Blobs on disk are UUID filenames with no extension and no metadata. Set
 `FileProtectionType.completeUnlessOpen` on the container as defence beneath the app's own
 encryption.
 
+VaultFile carries the lifecycle state: `isHidden`, `isArchived`, and `deletedAt: Date?`
+(nil = live, a date = in Recently Deleted). Model the state as a computed enum
+(`live/archived/trashed`) over those columns rather than a free-for-all of booleans, and
+route every list through predicates on them:
+- live grid: `deletedAt == nil AND isArchived == NO AND isHidden == <side>`
+- archive: `deletedAt == nil AND isArchived == YES`
+- recently deleted: `deletedAt != nil`
+Folder item-counts and the storage breakdown both exclude trashed items; storage still
+counts archived ones (they occupy space), folder counts do not. Trashing clears
+`isArchived` so a file lives in one place. On launch, purge where
+`deletedAt < now − 30 days`.
+
 Use `NSPersistentContainer` with a background context for writes and
 `NSFetchedResultsController` or an `@FetchRequest` for the UI. No SwiftData.
 
@@ -135,6 +157,14 @@ Implement `AVAssetResourceLoaderDelegate` against a custom URL scheme so `AVPlay
 decrypted chunks on demand. Plaintext never reaches disk, and scrubbing works because the
 loader can serve any byte range by decrypting the chunks it covers. This is the direct
 counterpart to the Android build's custom media DataSource.
+
+**Document preview — PDFs in-app**
+PDFs render inside the app, never handed to an external viewer. Decrypt the whole file into
+the preview cache (the one plaintext location, wiped on lock/background/launch) and open it
+with `PDFKit`'s `PDFView` / `PDFDocument`. This is the counterpart to the Android build's
+`PdfRenderer` path. Everything else non-media (docx, etc.) goes to `QLPreviewController`
+against the same short-lived cache file. Images and video never hit disk — only PDFs and
+Quick Look formats do, and only transiently.
 
 **Portable archive**
 A `.fwvault` export: PBKDF2-HMAC-SHA256, 210,000 iterations, via CommonCrypto — CryptoKit
@@ -147,7 +177,8 @@ than the device, so it restores on a different device. This is what cloud backup
 ### Entities
 
 `VaultFileEntity: AppEntity`
-  name, category (AppEnum: photo/video/document/other), size, dateAdded, folder.
+  name, category (AppEnum: photo/video/document/other), size, dateAdded, folder, and state
+  (AppEnum: live/archived/trashed — trashed also carries the auto-purge date).
   `DisplayRepresentation` with title, subtitle (formatted size), and an image from the
   thumbnail — but only when the user has opted into thumbnails leaving the app.
 
@@ -170,9 +201,14 @@ than the device, so it restores on a different device. This is what cloud backup
   This single conformance makes the vault composable from Shortcuts without writing a
   bespoke intent per query. It is the highest-leverage thing in the whole integration.
 
-**Hard rule: no query ever returns a hidden-vault item.** Filter in the query, not in the
-UI. A hidden item must not exist as an entity — so it cannot be resolved, indexed, suggested
-or returned. Same rule the Android build applies to what reaches the watch.
+  Expose state as a filter too, defaulting to live: a bare "Find Files" must never surface
+  archived or trashed items unless the user explicitly asks for them. Trashed items are on
+  their way out — treat returning one as a deliberate act, not a default.
+
+**Hard rule: no query ever returns a hidden-vault item, and no default query returns a
+trashed one.** Filter in the query, not in the UI. A hidden item must not exist as an
+entity — so it cannot be resolved, indexed, suggested or returned. Same rule the Android
+build applies to what reaches the watch.
 
 ### Intents
 
@@ -182,14 +218,29 @@ or returned. Same rule the Android build applies to what reaches the watch.
                            and as a Shortcuts action, so "save every photo from this album
                            into FileWall" becomes something the user can build themselves.
   FindFilesIntent          backed by EntityPropertyQuery. ReturnsValue<[VaultFileEntity]>.
+  RenameFileIntent         takes a VaultFileEntity and a new name.
+  MoveFileIntent           takes a VaultFileEntity and a VaultFolderEntity (or none).
   HideItemIntent           moves an item into the hidden vault.
   UnhideItemIntent         the reverse.
+  ArchiveItemIntent        moves an item into Archive.
+  UnarchiveItemIntent      the reverse.
+  DeleteFileIntent         soft-delete: moves an item into Recently Deleted. ProvidesDialog
+                           noting it is recoverable for 30 days — this is not a destructive
+                           intent and should not read as one.
+  RestoreFileIntent        takes a trashed VaultFileEntity, brings it back to live.
+  DeleteForeverIntent      permanent erase of a trashed item. ProvidesDialog + a confirmation
+                           (`requestConfirmation`) — this is the one that cannot be undone.
+  EmptyRecentlyDeletedIntent  purges the trash for the current side. Confirmation required.
   LockVaultIntent          locks immediately.
   UnlockHiddenVaultIntent  requires local device authentication.
   BackUpVaultIntent        runs a backup. ProvidesDialog with the outcome.
   VaultStatusIntent        storage totals and item count. Safe: describes the vault's size,
                            never its contents.
   ExportFileIntent         decrypts one file out to a Shortcuts file output.
+
+Only `DeleteForeverIntent` and `EmptyRecentlyDeletedIntent` are destructive — mark them with
+`static var isDestructive: Bool { true }` so Shortcuts flags them. `DeleteFileIntent` is
+reversible and must not carry that flag, or the trash stops feeling safe.
 
 Use `ShowsSnippetView` on FindFilesIntent and VaultStatusIntent for a result card — that is
 available in iOS 16 (static snippets; interactive ones are much later).
@@ -245,9 +296,10 @@ Attach thumbnails behind a second, separate toggle — a thumbnail in the Spotli
 a decrypted copy of vault content living outside the vault, and that deserves its own
 decision rather than riding along with the first.
 
-Delete from the index on: item deleted, item moved to hidden, indexing switched off, vault
-reset. Test the "moved to hidden" path specifically — it is the one that gets missed and the
-one that matters.
+Delete from the index on: item moved to Recently Deleted, item moved to hidden, item
+archived, permanent purge, indexing switched off, vault reset. Index live items only —
+never a trashed or archived one. Test the "moved to hidden" and "moved to Recently Deleted"
+paths specifically — they are the ones that get missed and the ones that matter.
 
 ## Widgets
 
@@ -261,6 +313,33 @@ one that matters.
 ## iOS and iPadOS
 
 One adaptive target. Three sections matching the Android build: Vault, Hidden, Security.
+
+**Per-file actions.** Every file tile/row has a `Menu` (the ⋯ overflow, and the same set as
+the `.contextMenu` on long-press) whose entries are context-aware:
+- live: Rename, Move to folder, Archive, Delete (→ Recently Deleted)
+- archive: Remove from Archive, Move, Delete
+- recently deleted: Restore, Delete Forever
+Rename is a text field, Move is a folder picker, the two permanent actions confirm first.
+
+**Folders show a cover image.** Each folder tile uses the newest previewable file inside it
+as its cover (thumbnail, dark bottom scrim, name over it), falling back to a tinted folder
+glyph when the folder holds nothing previewable — mirror the Android tiles.
+
+**Recently Deleted and Archive** are two system destinations shown at the *end* of the
+folder row (after the user's own folders), each with a live count, one per vault side.
+Opening one swaps the grid for that state's contents with a back affordance; Recently
+Deleted also offers "Empty". Neither shows the import button.
+
+**Lock now.** Security has a prominent, tinted "Lock Hidden Vault Now" button that seals the
+hidden side immediately and wipes the preview cache — the UI twin of `LockVaultIntent`,
+independent of the inactivity timer.
+
+**Biometric unlock with passcode fallback.** Gate the hidden vault with `LAContext`
+`.deviceOwnerAuthentication` (Face ID / Touch ID *and* device-passcode fallback), not
+`.deviceOwnerAuthenticationWithBiometrics` alone — a user with no enrolled biometrics, or a
+failed scan, must still get in via the device passcode. Offer a "require biometrics only"
+toggle that switches to the biometrics-only policy for people who want it. This matches the
+Android build's device-credential fallback.
 
 - iPhone: `TabView`.
 - iPad: `NavigationSplitView` (iOS 16) — folder sidebar, file grid, inspector detail. Not a
@@ -301,7 +380,8 @@ even ask for them.
 Constraints, not preferences. Anything violating one is a bug:
 
 1. A hidden item is never an AppEntity, never indexed, never in a query result, never sent
-   to the watch, never in a widget.
+   to the watch, never in a widget. A trashed item is never indexed, never sent to the
+   watch, and never returned by a default query.
 2. Plaintext exists on disk in exactly one place — a preview cache for Quick Look of formats
    the app cannot render — wiped on lock, on backgrounding, and at launch.
 3. No analytics, no telemetry, no crash reporter that transmits file names.
@@ -329,7 +409,13 @@ Constraints, not preferences. Anything violating one is a bug:
   whole-file decrypt.
 - Key invalidation: a Keychain item guarded by `.biometryCurrentSet` must fail after
   biometric re-enrolment.
-- App Intents: assert a hidden entity is unresolvable through every query path.
+- App Intents: assert a hidden entity is unresolvable through every query path, and that a
+  trashed entity is absent from every default (state-unspecified) query.
+- Lifecycle: delete → item leaves the live grid, folder count drops, storage total for a
+  trashed item drops but an archived item's does not; restore returns it; archive/unarchive
+  round-trips; a file is never in two states at once.
+- Retention: an item with `deletedAt` older than 30 days is purged on launch and its blob is
+  gone from disk; a 29-day-old item survives.
 
 ## Style
 
@@ -362,5 +448,9 @@ replacements. Building on 14.2 now is a real path, not a dead end.
   to chunk-index mapping."*
 - *"The App Intents layer. Start with VaultFileEntity, VaultFileQuery and FindFilesIntent,
   and show me the Shortcuts action they generate."*
-- *"Audit every code path that could surface a hidden item outside the app: queries,
-  Spotlight, widgets, WatchConnectivity, Handoff. List them and prove each is blocked."*
+- *"Implement the file lifecycle: live / archived / Recently Deleted over Core Data, with
+  the fetch predicates, the 30-day purge-on-launch, and Restore / Delete Forever / Empty.
+  Then the context-menu actions that drive it."*
+- *"Audit every code path that could surface a hidden OR trashed item outside the app:
+  queries, Spotlight, widgets, WatchConnectivity, Handoff. List them and prove each is
+  blocked."*
