@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.filewall.R
 import com.filewall.data.media.ThumbnailStore
 import com.filewall.model.FolderWithCount
@@ -239,10 +240,12 @@ fun SpecialFolderCard(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    lineHeight = 15.sp,
                 )
             }
             if (count > 0) {
@@ -470,6 +473,7 @@ fun FileGridTile(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     menuActions: List<TileAction> = emptyList(),
+    previewDocs: Boolean = true,
 ) {
     Column(
         modifier = modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
@@ -481,7 +485,7 @@ fun FileGridTile(
                 .aspectRatio(1f)
                 .clip(MaterialTheme.shapes.medium),
         ) {
-            ThumbnailImage(item = item, store = thumbnails, modifier = Modifier.fillMaxSize())
+            ThumbnailImage(item = item, store = thumbnails, modifier = Modifier.fillMaxSize(), previewDocs = previewDocs)
 
             if (!selectionMode && menuActions.isNotEmpty()) {
                 Box(
@@ -548,6 +552,7 @@ fun FileListRow(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     menuActions: List<TileAction> = emptyList(),
+    previewDocs: Boolean = true,
 ) {
     Row(
         modifier = modifier
@@ -561,7 +566,7 @@ fun FileListRow(
                 .size(56.dp)
                 .clip(MaterialTheme.shapes.small),
         ) {
-            ThumbnailImage(item = item, store = thumbnails, modifier = Modifier.fillMaxSize())
+            ThumbnailImage(item = item, store = thumbnails, modifier = Modifier.fillMaxSize(), previewDocs = previewDocs)
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {

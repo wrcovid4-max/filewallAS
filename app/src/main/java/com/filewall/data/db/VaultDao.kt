@@ -53,6 +53,14 @@ interface VaultDao {
     @Query("SELECT * FROM vault_items WHERE folderId = :folderId")
     suspend fun itemsInFolder(folderId: String): List<VaultItem>
 
+    // Only live members of a folder — the ones destroyed when the folder is deleted. Items
+    // already in Recently Deleted or Archive are left alone.
+    @Query("SELECT * FROM vault_items WHERE folderId = :folderId AND deletedAt = 0 AND archived = 0")
+    suspend fun liveItemsInFolder(folderId: String): List<VaultItem>
+
+    @Query("UPDATE vault_items SET folderId = NULL WHERE folderId = :folderId")
+    suspend fun detachFolder(folderId: String)
+
     @Query("SELECT COUNT(*) FROM vault_items WHERE folderId = :folderId")
     fun observeFolderCount(folderId: String): Flow<Int>
 

@@ -43,6 +43,8 @@
     <string name="empty_archive">The Archive is empty. Archive files to tuck them away without deleting them.</string>
 
     <!-- Recently Deleted &amp; Archive -->
+    <string name="show_doc_previews">Document Previews</string>
+    <string name="show_doc_previews_desc">Show a cover image on document tiles. Turn off to show a plain document icon instead.</string>
     <string name="recently_deleted">Recently Deleted</string>
     <string name="archive">Archive</string>
     <string name="dialog_delete_forever_title">Delete “%1$s” for good?</string>

@@ -28,6 +28,8 @@ data class VaultSettings(
     val sortField: SortField = SortField.DATE_ADDED,
     val sortAscending: Boolean = false,
     val gridView: Boolean = true,
+    /** Whether document tiles show a rendered cover, or a plain generic icon. */
+    val showDocPreviews: Boolean = true,
 )
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "filewall_settings")
@@ -50,6 +52,7 @@ class SettingsStore(context: Context) {
             sortField = prefs[Keys.SORT_FIELD]?.toEnum { SortField.valueOf(it) } ?: SortField.DATE_ADDED,
             sortAscending = prefs[Keys.SORT_ASC] ?: false,
             gridView = prefs[Keys.GRID_VIEW] ?: true,
+            showDocPreviews = prefs[Keys.DOC_PREVIEWS] ?: true,
         )
     }
 
@@ -65,6 +68,7 @@ class SettingsStore(context: Context) {
     suspend fun setSortField(value: SortField) = put(Keys.SORT_FIELD, value.name)
     suspend fun setSortAscending(value: Boolean) = put(Keys.SORT_ASC, value)
     suspend fun setGridView(value: Boolean) = put(Keys.GRID_VIEW, value)
+    suspend fun setShowDocPreviews(value: Boolean) = put(Keys.DOC_PREVIEWS, value)
 
     private suspend fun <T> put(key: Preferences.Key<T>, value: T) {
         store.edit { it[key] = value }
@@ -86,5 +90,6 @@ class SettingsStore(context: Context) {
         val SORT_FIELD = stringPreferencesKey("sort_field")
         val SORT_ASC = booleanPreferencesKey("sort_ascending")
         val GRID_VIEW = booleanPreferencesKey("grid_view")
+        val DOC_PREVIEWS = booleanPreferencesKey("show_doc_previews")
     }
 }

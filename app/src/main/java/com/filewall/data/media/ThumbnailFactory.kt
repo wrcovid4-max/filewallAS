@@ -3,9 +3,12 @@ package com.filewall.data.media
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.pdf.PdfRenderer
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import androidx.exifinterface.media.ExifInterface
 import com.filewall.model.FileCategory
 import java.io.File
@@ -36,23 +39,62 @@ object ThumbnailFactory {
         override fun hashCode(): Int = jpeg.contentHashCode()
     }
 
-    fun fromUri(context: Context, uri: Uri, category: FileCategory): Preview? = when (category) {
-        FileCategory.PHOTO -> imagePreview(
-            openStream = { context.contentResolver.openInputStream(uri) },
-        )
+    fun fromUri(context: Context, uri: Uri, category: FileCategory, mimeType: String? = null): Preview? =
+        when (category) {
+            FileCategory.PHOTO -> imagePreview(
+                openStream = { context.contentResolver.openInputStream(uri) },
+            )
 
-        FileCategory.VIDEO -> videoPreview { retriever ->
-            retriever.setDataSource(context, uri)
+            FileCategory.VIDEO -> videoPreview { retriever ->
+                retriever.setDataSource(context, uri)
+            }
+
+            // PDFs get a first-page cover; everything else keeps the generic doc icon.
+            FileCategory.DOC -> if (isPdf(mimeType)) {
+                pdfPreview { context.contentResolver.openFileDescriptor(uri, "r") }
+            } else {
+                null
+            }
+
+            else -> null
         }
 
-        else -> null
-    }
+    fun fromFile(file: File, category: FileCategory, mimeType: String? = null): Preview? =
+        when (category) {
+            FileCategory.PHOTO -> imagePreview(openStream = { file.inputStream() })
+            FileCategory.VIDEO -> videoPreview { retriever -> retriever.setDataSource(file.absolutePath) }
+            FileCategory.DOC -> if (isPdf(mimeType)) {
+                pdfPreview { ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY) }
+            } else {
+                null
+            }
+            else -> null
+        }
 
-    fun fromFile(file: File, category: FileCategory): Preview? = when (category) {
-        FileCategory.PHOTO -> imagePreview(openStream = { file.inputStream() })
-        FileCategory.VIDEO -> videoPreview { retriever -> retriever.setDataSource(file.absolutePath) }
-        else -> null
-    }
+    private fun isPdf(mimeType: String?): Boolean =
+        mimeType?.equals("application/pdf", ignoreCase = true) == true
+
+    // -------------------------------------------------------------------- pdfs
+
+    /** Renders page 1 of a PDF to a preview. [open] yields a seekable descriptor PdfRenderer needs. */
+    private fun pdfPreview(open: () -> ParcelFileDescriptor?): Preview? = runCatching {
+        val descriptor = open() ?: return null
+        descriptor.use { pfd ->
+            PdfRenderer(pfd).use { renderer ->
+                if (renderer.pageCount < 1) return null
+                renderer.openPage(0).use { page ->
+                    val ratio = page.height.toFloat() / page.width.toFloat()
+                    val width = THUMB_MAX_EDGE
+                    val height = (width * ratio).toInt().coerceAtLeast(1)
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    // White backing so a page with transparency doesn't render on black.
+                    bitmap.eraseColor(Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    Preview(compress(bitmap), page.width, page.height).also { bitmap.recycle() }
+                }
+            }
+        }
+    }.getOrNull()
 
     // ------------------------------------------------------------------ images
 
