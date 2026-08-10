@@ -3,6 +3,7 @@ package com.filewall.data.backup
 import android.accounts.Account
 import android.content.Context
 import android.content.Intent
+import android.util.Base64
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -24,6 +25,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 
 /**
@@ -180,9 +182,34 @@ class DriveBackup(private val context: Context) {
         }
     }
 
+    // ------------------------------------------------------------- managed key
+
+    /**
+     * The passphrase for the "sign-in only" backup — no user passphrase to remember.
+     *
+     * A random 256-bit key is generated once and kept as `filewall-backup.key` in the same
+     * private `appDataFolder` as the archive. Any device signed into this Google account reads
+     * it back and can decrypt; nobody without account access ever sees it. This is deliberately
+     * "as safe as your Google account" — the key sits beside the data, so whoever can reach the
+     * appDataFolder can restore. The iOS app reads the same key file (see BACKUP_FORMAT.md).
+     */
+    suspend fun managedPassphrase(): CharArray = withContext(Dispatchers.IO) {
+        val token = accessToken()
+        findFileId(token, KEY_FILE_NAME)?.let { id ->
+            return@withContext downloadBytes(token, id).decodeToString().trim().toCharArray()
+        }
+        // First backup on this account: mint the key and store it.
+        val key = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val encoded = Base64.encodeToString(key, Base64.NO_WRAP)
+        uploadNamed(token, KEY_FILE_NAME, encoded.toByteArray())
+        encoded.toCharArray()
+    }
+
     // ---------------------------------------------------------------- internals
 
-    private fun findBackupId(token: String): String? {
+    private fun findBackupId(token: String): String? = findFileId(token, VaultArchive.DEFAULT_FILE_NAME)
+
+    private fun findFileId(token: String, name: String): String? {
         val request = Request.Builder()
             .url("$DRIVE_BASE?spaces=$APP_DATA_FOLDER&fields=files(id,name)&pageSize=100")
             .header("Authorization", "Bearer $token")
@@ -192,10 +219,43 @@ class DriveBackup(private val context: Context) {
             val files = JSONObject(response.body?.string().orEmpty()).optJSONArray("files") ?: return null
             for (index in 0 until files.length()) {
                 val file = files.getJSONObject(index)
-                if (file.optString("name") == VaultArchive.DEFAULT_FILE_NAME) return file.optString("id")
+                if (file.optString("name") == name) return file.optString("id")
             }
         }
         return null
+    }
+
+    private fun downloadBytes(token: String, id: String): ByteArray {
+        val request = Request.Builder()
+            .url("$DRIVE_BASE/$id?alt=media")
+            .header("Authorization", "Bearer $token")
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw driveError("Download", response.code, response.body?.string())
+            return response.body?.bytes() ?: throw IOException("Drive returned an empty body")
+        }
+    }
+
+    /** Creates a small named file in the app data folder (used for the managed key). */
+    private fun uploadNamed(token: String, name: String, bytes: ByteArray) {
+        val metadata = JSONObject().apply {
+            put("name", name)
+            put("parents", org.json.JSONArray().put(APP_DATA_FOLDER))
+        }
+        val request = Request.Builder()
+            .url("$UPLOAD_BASE?uploadType=multipart&fields=id")
+            .post(
+                MultipartBody.Builder()
+                    .setType("multipart/related".toMediaType())
+                    .addPart(metadata.toString().toRequestBody(JSON.toMediaType()))
+                    .addPart(bytes.toRequestBody(OCTET_STREAM.toMediaType()))
+                    .build(),
+            )
+            .header("Authorization", "Bearer $token")
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw driveError("Key upload", response.code, response.body?.string())
+        }
     }
 
     private fun accessToken(): String {
@@ -216,6 +276,7 @@ class DriveBackup(private val context: Context) {
     }
 
     private companion object {
+        const val KEY_FILE_NAME = "filewall-backup.key"
         const val SCOPE_APPDATA = "https://www.googleapis.com/auth/drive.appdata"
         const val APP_DATA_FOLDER = "appDataFolder"
         const val DRIVE_BASE = "https://www.googleapis.com/drive/v3/files"

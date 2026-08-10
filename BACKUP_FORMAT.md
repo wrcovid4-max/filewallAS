@@ -54,6 +54,29 @@ Minimum passphrase length enforced on **write** is 8; reads accept any length (t
 actually gates a bad passphrase — a wrong passphrase yields a wrong `macKey` and the trailer
 comparison fails with "wrong passphrase or damaged archive").
 
+### Two ways the "passphrase" is supplied
+
+The container is identical either way — only where the passphrase comes from differs:
+
+1. **Local `.fwvault` export / import** — the user types a passphrase. Nothing else is stored;
+   they must remember it. This is the portable, zero-knowledge path.
+2. **Drive "Backup & Sync" (sign-in only)** — there is no user passphrase. A random 256-bit key
+   is generated once and stored, Base64 (`NO_WRAP`) as UTF-8 text, in a **second file in the
+   same `appDataFolder`**:
+
+   ```
+   filewall-backup.key      Base64 of 32 random bytes — the passphrase for the archive
+   filewall-backup.fwvault  the archive, keyed from that
+   ```
+
+   Any device signed into the account downloads `filewall-backup.key`, uses its text as the
+   passphrase (fed to the same PBKDF2), and decrypts. First backup on an account mints the key
+   if it is absent. This is deliberately **"as safe as the Google account"**: the key sits
+   beside the data, so whoever can read the `appDataFolder` can restore. It never leaves that
+   private folder. **iOS must follow the same rule** — read `filewall-backup.key` from
+   `appDataFolder` and use its contents as the passphrase; only fall back to prompting if you
+   are restoring a *local* file that has no key beside it.
+
 ## Read order (matters)
 
 1. Read + check magic, salt, iterations, iv.

@@ -18,9 +18,9 @@ import java.util.concurrent.TimeUnit
  * Unattended daily upload of the encrypted archive to Drive.
  *
  * Runs on the same `.fwvault` path as the manual button — there is no second format and no
- * second code path to keep honest. The passphrase comes from [AutoBackupSecret]; if it has
- * gone (switched off, or the Keystore key invalidated by a factory reset of credentials)
- * the job fails permanently rather than silently uploading nothing.
+ * second code path to keep honest. The archive key is the managed key in the account's Drive
+ * appDataFolder, so the worker holds no secret of its own; it only needs the signed-in
+ * account and a network. Transient failures retry; a signed-out account fails the run.
  */
 class DriveSyncWorker(
     appContext: Context,
@@ -30,14 +30,16 @@ class DriveSyncWorker(
     override suspend fun doWork(): ListenableWorker.Result {
         val container = (applicationContext as FileWallApp).container
 
-        val passphrase = container.autoBackupSecret.read() ?: run {
-            Log.w(TAG, "No stored passphrase; disabling scheduled backup")
-            return ListenableWorker.Result.failure()
-        }
-
         val staging = File(applicationContext.cacheDir, STAGING_NAME)
         return try {
-            container.archive.exportTo(staging, passphrase)
+            // Sign-in-only backup: the key lives in the account's Drive appDataFolder, so the
+            // worker needs no stored secret — just the signed-in account and a network.
+            val passphrase = container.drive.managedPassphrase()
+            try {
+                container.archive.exportTo(staging, passphrase)
+            } finally {
+                passphrase.fill(' ')
+            }
             container.drive.upload(staging)
             ListenableWorker.Result.success()
         } catch (error: Exception) {
@@ -50,7 +52,6 @@ class DriveSyncWorker(
                 ListenableWorker.Result.failure()
             }
         } finally {
-            passphrase.fill(' ')
             staging.delete()
         }
     }

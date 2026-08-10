@@ -64,9 +64,6 @@ import com.filewall.util.formatDuration
 private sealed interface PassphrasePrompt {
     data class ExportLocal(val destination: android.net.Uri) : PassphrasePrompt
     data class RestoreLocal(val source: android.net.Uri) : PassphrasePrompt
-    data object DriveBackup : PassphrasePrompt
-    data object DriveRestore : PassphrasePrompt
-    data object EnableAutoBackup : PassphrasePrompt
 }
 
 @Composable
@@ -464,7 +461,7 @@ fun SecurityScreen(
                     Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
-                            onClick = { prompt = PassphrasePrompt.DriveBackup },
+                            onClick = { viewModel.backupToDrive() },
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.extraLarge,
                         ) {
@@ -473,7 +470,7 @@ fun SecurityScreen(
                             Text(stringResourceSafe(R.string.backup))
                         }
                         OutlinedButton(
-                            onClick = { prompt = PassphrasePrompt.DriveRestore },
+                            onClick = { viewModel.restoreFromDrive() },
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.extraLarge,
                         ) {
@@ -490,13 +487,9 @@ fun SecurityScreen(
                         description = stringResourceSafe(R.string.auto_backup_desc),
                         checked = settings.autoBackupEnabled,
                         onCheckedChange = { enabled ->
-                            // Enabling needs the passphrase up front; the worker has no one
-                            // to ask when it wakes up.
-                            if (enabled) {
-                                prompt = PassphrasePrompt.EnableAutoBackup
-                            } else {
-                                viewModel.disableAutoBackup()
-                            }
+                            // Sign-in-only: the worker reads the managed key from Drive, so
+                            // there is nothing to ask the user up front.
+                            if (enabled) viewModel.enableAutoBackup() else viewModel.disableAutoBackup()
                         },
                     )
                 }
@@ -535,13 +528,10 @@ fun SecurityScreen(
     }
 
     prompt?.let { current ->
-        val writing = current is PassphrasePrompt.ExportLocal ||
-            current is PassphrasePrompt.DriveBackup ||
-            current is PassphrasePrompt.EnableAutoBackup
-        val titleRes = when (current) {
-            is PassphrasePrompt.EnableAutoBackup -> R.string.auto_backup
-            else -> if (writing) R.string.backup else R.string.restore
-        }
+        // Only the local .fwvault export/import still asks for a passphrase — Drive backup is
+        // sign-in only and keys itself from the account's managed key.
+        val writing = current is PassphrasePrompt.ExportLocal
+        val titleRes = if (writing) R.string.backup else R.string.restore
         PassphraseDialog(
             title = stringResourceSafe(titleRes),
             hint = stringResourceSafe(R.string.archive_passphrase_hint),
@@ -554,9 +544,6 @@ fun SecurityScreen(
                 when (current) {
                     is PassphrasePrompt.ExportLocal -> viewModel.exportArchive(current.destination, passphrase)
                     is PassphrasePrompt.RestoreLocal -> viewModel.restoreArchive(current.source, passphrase)
-                    is PassphrasePrompt.DriveBackup -> viewModel.backupToDrive(passphrase)
-                    is PassphrasePrompt.DriveRestore -> viewModel.restoreFromDrive(passphrase)
-                    is PassphrasePrompt.EnableAutoBackup -> viewModel.enableAutoBackup(passphrase)
                 }
                 prompt = null
             },

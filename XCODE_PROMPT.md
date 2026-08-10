@@ -412,9 +412,12 @@ Constraints, not preferences. Anything violating one is a bug:
 - Cloud backup: to share one backup with the Android app, use **Google Drive's
   `appDataFolder`** (scope `drive.appdata`), same fixed filename `filewall-backup.fwvault`,
   with the iOS OAuth client under the **same Google Cloud project** as Android's — see
-  `BACKUP_FORMAT.md`. (A CloudKit `CKAsset` backup is fine as an iOS-only *addition*, but it
-  cannot be read by Android, so it is not the cross-platform path.) Also offer "Save to Files"
-  so nobody is forced into any cloud.
+  `BACKUP_FORMAT.md`. **Sign-in only, no backup passphrase:** read the managed key file
+  `filewall-backup.key` from the same `appDataFolder` and use its Base64 text as the archive
+  passphrase (mint it on first backup if absent) — do not prompt the user for a Drive backup.
+  Only the *local* "Save to Files" export prompts for a passphrase. (A CloudKit `CKAsset`
+  backup is fine as an iOS-only *addition*, but Android can't read it, so it's not the
+  cross-platform path.)
 
 ## Testing
 
