@@ -337,6 +337,16 @@ fun SecurityScreen(
                     checked = settings.syncToWatch,
                     onCheckedChange = { viewModel.setSyncToWatch(it) },
                 )
+
+                SettingDivider()
+
+                SettingSwitchRow(
+                    title = stringResourceSafe(R.string.show_doc_previews),
+                    description = stringResourceSafe(R.string.show_doc_previews_desc),
+                    checked = settings.showDocPreviews,
+                    accentThumb = true,
+                    onCheckedChange = { viewModel.setShowDocPreviews(it) },
+                )
             }
         }
 

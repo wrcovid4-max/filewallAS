@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.filewall.R
 import com.filewall.data.crypto.PinManager
 import com.filewall.data.settings.VaultSettings
+import com.filewall.model.FileCategory
 import com.filewall.model.SpecialView
 import com.filewall.model.VaultFilter
 import com.filewall.model.VaultItem
@@ -294,9 +295,11 @@ fun VaultScreen(
                             }
                             items(state.folders, key = { it.folder.id }) { entry ->
                                 // Cover = a file in this folder that actually has a preview
-                                // (newest first); doc-only folders keep the tinted icon.
+                                // (newest first); doc-only folders keep the tinted icon, and
+                                // docs are skipped entirely when doc previews are turned off.
                                 val cover = state.items.firstOrNull {
-                                    it.folderId == entry.folder.id && it.thumbName != null
+                                    it.folderId == entry.folder.id && it.thumbName != null &&
+                                        (state.showDocPreviews || it.category != FileCategory.DOC)
                                 }
                                 FolderCard(
                                     entry = entry,
@@ -428,6 +431,7 @@ fun VaultScreen(
                             onClick = onClick,
                             onLongClick = { viewModel.toggleSelection(item.id) },
                             menuActions = menuActions,
+                            previewDocs = state.showDocPreviews,
                         )
                     } else {
                         FileListRow(
@@ -438,6 +442,7 @@ fun VaultScreen(
                             onClick = onClick,
                             onLongClick = { viewModel.toggleSelection(item.id) },
                             menuActions = menuActions,
+                            previewDocs = state.showDocPreviews,
                         )
                     }
                 }

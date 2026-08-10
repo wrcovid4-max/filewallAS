@@ -91,7 +91,7 @@ class VaultRepository(
                 val outcome = runCatching {
                     // The preview is built first: if the source is unreadable we find out
                     // before writing anything, and the tile never ships without an image.
-                    val preview = ThumbnailFactory.fromUri(context, uri, category)
+                    val preview = ThumbnailFactory.fromUri(context, uri, category, meta.mimeType)
 
                     val plainBytes = context.contentResolver.openInputStream(uri)?.use { input ->
                         blob.outputStream().use { output -> crypto.encrypt(input, output) }
@@ -167,6 +167,8 @@ class VaultRepository(
         folderId: String?,
         addedAt: Long,
         source: File,
+        archived: Boolean = false,
+        deletedAt: Long = 0,
     ): VaultItem = withContext(Dispatchers.IO) {
         val category = FileCategory.fromMime(mimeType, name)
         val id = UUID.randomUUID().toString()
@@ -174,7 +176,7 @@ class VaultRepository(
         val plainBytes = source.inputStream().use { input ->
             blob.outputStream().use { output -> crypto.encrypt(input, output) }
         }
-        val preview = ThumbnailFactory.fromFile(source, category)
+        val preview = ThumbnailFactory.fromFile(source, category, mimeType)
         val thumbName = preview?.let {
             crypto.encryptBytes(it.jpeg, File(thumbDir, "$id.fw"))
             "$id.fw"
@@ -192,6 +194,8 @@ class VaultRepository(
             thumbName = thumbName,
             width = preview?.sourceWidth ?: 0,
             height = preview?.sourceHeight ?: 0,
+            archived = archived,
+            deletedAt = deletedAt,
         ).also { dao.upsertItem(it) }
     }
 
@@ -344,22 +348,28 @@ class VaultRepository(
         dao.recolorFolder(id, colorIndex)
     }
 
-    /** Deletes a folder and everything inside it, for good. */
+    /**
+     * Deletes a folder and its live contents. Items already in Recently Deleted or Archive
+     * survive — they just lose the folder reference — so "Delete All Folders" can never empty
+     * the trash or the archive.
+     */
     suspend fun deleteFolder(id: String) = withContext(Dispatchers.IO) {
-        purge(dao.itemsInFolder(id))
+        purge(dao.liveItemsInFolder(id))
+        dao.detachFolder(id)
         dao.deleteFolderRow(id)
     }
 
-    /** The toolbar's "Delete All": every folder on this side of the vault, contents included. */
+    /** The toolbar's "Delete All": every folder on this side of the vault, live contents included. */
     suspend fun deleteAllFolders(hidden: Boolean) = withContext(Dispatchers.IO) {
         dao.foldersFor(hidden).forEach { folder ->
-            purge(dao.itemsInFolder(folder.id))
+            purge(dao.liveItemsInFolder(folder.id))
+            dao.detachFolder(folder.id)
         }
         dao.deleteFoldersRows(hidden)
     }
 
     suspend fun countInFolders(hidden: Boolean): Int = withContext(Dispatchers.IO) {
-        dao.foldersFor(hidden).sumOf { dao.itemsInFolder(it.id).size }
+        dao.foldersFor(hidden).sumOf { dao.liveItemsInFolder(it.id).size }
     }
 
     suspend fun allItems(): List<VaultItem> = withContext(Dispatchers.IO) { dao.allItems() }

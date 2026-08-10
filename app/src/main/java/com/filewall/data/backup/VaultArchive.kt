@@ -131,6 +131,8 @@ class VaultArchive(
                                 put("addedAt", item.addedAt)
                                 put("folderId", item.folderId ?: JSONObject.NULL)
                                 put("hidden", item.hidden)
+                                put("archived", item.archived)
+                                put("deletedAt", item.deletedAt)
                                 put("entry", blobEntry(item.id))
                             },
                         )
@@ -246,6 +248,8 @@ class VaultArchive(
                     folderId = meta.optString("folderId").takeIf { !meta.isNull("folderId") && it.isNotBlank() },
                     addedAt = meta.optLong("addedAt", System.currentTimeMillis()),
                     source = staged,
+                    archived = meta.optBoolean("archived", false),
+                    deletedAt = meta.optLong("deletedAt", 0),
                 )
                 staged.delete()
                 restored++
@@ -306,7 +310,9 @@ class VaultArchive(
         const val MIN_PASSPHRASE_LENGTH = 8
         const val DEFAULT_FILE_NAME = "filewall-backup.fwvault"
 
-        private const val FORMAT_VERSION = 1
+        // v2 adds per-item `archived` and `deletedAt`; readers default them, so a v1 archive
+        // still restores and a v1 reader still opens a v2 archive (state falls back to live).
+        private const val FORMAT_VERSION = 2
         private const val MANIFEST_ENTRY = "manifest.json"
         private const val KDF_ALGORITHM = "PBKDF2WithHmacSHA256"
         private const val TRANSFORMATION = "AES/CTR/NoPadding"

@@ -166,11 +166,24 @@ with `PDFKit`'s `PDFView` / `PDFDocument`. This is the counterpart to the Androi
 against the same short-lived cache file. Images and video never hit disk — only PDFs and
 Quick Look formats do, and only transiently.
 
-**Portable archive**
-A `.fwvault` export: PBKDF2-HMAC-SHA256, 210,000 iterations, via CommonCrypto — CryptoKit
-has no PBKDF2 and no Argon2, so note that in a comment rather than leaving a reader
-wondering why CommonCrypto appears. Same chunked-GCM body, keyed from the passphrase rather
-than the device, so it restores on a different device. This is what cloud backup uploads.
+**Portable archive — must match Android byte-for-byte**
+The `.fwvault` export is a *cross-platform* container with its own fixed format, separate
+from the on-device chunked-GCM format. It is NOT chunked GCM — do not reuse the on-device
+format here, or an Android backup will not restore on iOS and vice versa. The exact spec is
+`BACKUP_FORMAT.md` in the repo; implement it precisely:
+
+    [ "FWARCH01" 8B ][ salt 16B ][ iterations 4B BE ][ iv 16B ][ AES-256-CTR(zip) ][ HMAC-SHA256 32B ]
+
+- PBKDF2-HMAC-SHA256, 210,000 iterations, 64-byte output → AES-256 key ‖ HMAC key.
+- AES-256-**CTR** body, HMAC-SHA256 over the **ciphertext only** (encrypt-then-MAC), verified
+  before anything is ingested.
+- Body is a ZIP of `manifest.json` + `blobs/<uuid>` plaintext files. Manifest is version 2 and
+  carries `hidden`, `archived` and `deletedAt` per item so lifecycle state round-trips.
+- PBKDF2, AES-CTR and HMAC all come from **CommonCrypto** — CryptoKit has neither PBKDF2 nor
+  CTR. Note that in a comment so nobody "modernises" it into GCM and breaks interop.
+
+This is the single source of cross-platform truth; when the prose here and `BACKUP_FORMAT.md`
+disagree, the spec file wins.
 
 ## App Intents — the centre of gravity
 
@@ -396,8 +409,12 @@ Constraints, not preferences. Anything violating one is a bug:
 - Keychain sharing across targets for the wrapped key, access group set explicitly.
 - `BGProcessingTaskRequest` for scheduled backup: `requiresExternalPower = false`,
   `requiresNetworkConnectivity = true`.
-- Cloud backup to the CloudKit private database as a `CKAsset` carrying the already-
-  encrypted archive. Also offer "Save to Files" so nobody is forced into iCloud.
+- Cloud backup: to share one backup with the Android app, use **Google Drive's
+  `appDataFolder`** (scope `drive.appdata`), same fixed filename `filewall-backup.fwvault`,
+  with the iOS OAuth client under the **same Google Cloud project** as Android's — see
+  `BACKUP_FORMAT.md`. (A CloudKit `CKAsset` backup is fine as an iOS-only *addition*, but it
+  cannot be read by Android, so it is not the cross-platform path.) Also offer "Save to Files"
+  so nobody is forced into any cloud.
 
 ## Testing
 

@@ -45,6 +45,7 @@ data class VaultUiState(
     val special: SpecialView = SpecialView.NONE,
     val trashCount: Int = 0,
     val archiveCount: Int = 0,
+    val showDocPreviews: Boolean = true,
 ) {
     /** The count shown next to the sort control: folders plus files, as the original does. */
     val visibleCount: Int get() = items.size + folders.size
@@ -165,6 +166,7 @@ class VaultViewModel(
             special = ex.special,
             trashCount = ex.trashCount,
             archiveCount = ex.archiveCount,
+            showDocPreviews = prefs.showDocPreviews,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), VaultUiState())
 

@@ -40,11 +40,18 @@ fun ThumbnailImage(
     store: ThumbnailStore,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
+    previewDocs: Boolean = true,
 ) {
-    var bitmap by remember(item.id) { mutableStateOf<ImageBitmap?>(store.peek(item.id)?.asImageBitmap()) }
+    // When document previews are turned off, a doc never renders its cover — it always shows
+    // the generic icon below, and we never decrypt a preview for it.
+    val showCover = previewDocs || item.category != FileCategory.DOC
 
-    LaunchedEffect(item.id, item.thumbName) {
-        if (bitmap == null) {
+    var bitmap by remember(item.id) {
+        mutableStateOf<ImageBitmap?>(if (showCover) store.peek(item.id)?.asImageBitmap() else null)
+    }
+
+    LaunchedEffect(item.id, item.thumbName, showCover) {
+        if (showCover && bitmap == null) {
             bitmap = store.load(item)?.asImageBitmap()
         }
     }
