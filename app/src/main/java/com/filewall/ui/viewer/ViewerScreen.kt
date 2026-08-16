@@ -4,7 +4,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,6 +96,12 @@ fun ViewerScreen(
     var offsetY by remember(item.id) { mutableFloatStateOf(0f) }
     val animatedScale by animateFloatAsState(targetValue = scale, label = "zoom")
 
+    // Anything with an in-app preview can be pinched: photos, PDFs and video. External docs
+    // (NoPreview) have nothing to zoom.
+    val zoomable = item.category == FileCategory.PHOTO ||
+        item.category == FileCategory.VIDEO ||
+        item.isPdf
+
     LaunchedEffect(item.id) {
         if (item.category == FileCategory.PHOTO) {
             image = loadImage(item)
@@ -146,17 +155,30 @@ fun ViewerScreen(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(item.id, item.category) {
-                        if (item.category != FileCategory.PHOTO) return@pointerInput
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 6f)
-                            if (scale > 1f) {
-                                offsetX += pan.x
-                                offsetY += pan.y
-                            } else {
-                                offsetX = 0f
-                                offsetY = 0f
-                            }
+                    .pointerInput(item.id, zoomable) {
+                        if (!zoomable) return@pointerInput
+                        // Two-finger gesture only: pinch to zoom, drag-with-two-fingers to pan.
+                        // A single finger is left untouched so a PDF's page list and the video
+                        // controls still scroll/seek normally.
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            do {
+                                val event = awaitPointerEvent()
+                                val pressed = event.changes.count { it.pressed }
+                                if (pressed >= 2) {
+                                    val zoom = event.calculateZoom()
+                                    val pan = event.calculatePan()
+                                    scale = (scale * zoom).coerceIn(1f, 6f)
+                                    if (scale > 1f) {
+                                        offsetX += pan.x
+                                        offsetY += pan.y
+                                    } else {
+                                        offsetX = 0f
+                                        offsetY = 0f
+                                    }
+                                    event.changes.forEach { it.consume() }
+                                }
+                            } while (event.changes.any { it.pressed })
                         }
                     },
                 contentAlignment = Alignment.Center,
@@ -178,9 +200,27 @@ fun ViewerScreen(
                             ),
                     )
 
-                    item.category == FileCategory.VIDEO -> videoPlayer(Modifier.fillMaxSize())
+                    item.category == FileCategory.VIDEO -> videoPlayer(
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = animatedScale,
+                                scaleY = animatedScale,
+                                translationX = offsetX,
+                                translationY = offsetY,
+                            ),
+                    )
 
-                    item.isPdf -> pdfViewer(Modifier.fillMaxSize())
+                    item.isPdf -> pdfViewer(
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = animatedScale,
+                                scaleY = animatedScale,
+                                translationX = offsetX,
+                                translationY = offsetY,
+                            ),
+                    )
 
                     else -> NoPreview(onOpenExternally)
                 }
@@ -193,7 +233,7 @@ fun ViewerScreen(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    if (item.category == FileCategory.PHOTO) {
+                    if (zoomable) {
                         StageButton(
                             icon = Icons.Filled.ZoomIn,
                             description = stringResourceSafe(R.string.zoom),
