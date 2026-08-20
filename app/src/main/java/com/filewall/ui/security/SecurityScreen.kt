@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -514,6 +515,8 @@ fun SecurityScreen(
             }
         }
 
+        item { AboutLinks() }
+
         item {
             Text(
                 stringResourceSafe(R.string.copyright),
@@ -549,6 +552,59 @@ fun SecurityScreen(
             },
         )
     }
+}
+
+/** FileWall's website pages, opened in the browser from the Security footer. */
+private object AppLinks {
+    private const val BASE = "https://wrcovid4-max.github.io/FileWallWeb/"
+    const val WEBSITE = BASE + "index.html"
+    const val PLATFORMS = BASE + "platforms.html"
+    const val DOWNLOAD = BASE + "download.html"
+    const val SUPPORT = BASE + "support.html"
+    const val PRIVACY = BASE + "privacy.html"
+    const val TERMS = BASE + "terms.html"
+    const val ACCESSIBILITY = BASE + "accessibility.html"
+    const val NEWS = BASE + "news.html"
+    const val TRADEMARKS = BASE + "trademarks.html"
+}
+
+@Composable
+private fun AboutLinks(modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            LinkText(stringResourceSafe(R.string.link_website)) { uriHandler.openUri(AppLinks.WEBSITE) }
+            LinkText(stringResourceSafe(R.string.link_platforms)) { uriHandler.openUri(AppLinks.PLATFORMS) }
+            LinkText(stringResourceSafe(R.string.link_download)) { uriHandler.openUri(AppLinks.DOWNLOAD) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            LinkText(stringResourceSafe(R.string.link_support)) { uriHandler.openUri(AppLinks.SUPPORT) }
+            LinkText(stringResourceSafe(R.string.link_privacy)) { uriHandler.openUri(AppLinks.PRIVACY) }
+            LinkText(stringResourceSafe(R.string.link_terms)) { uriHandler.openUri(AppLinks.TERMS) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            LinkText(stringResourceSafe(R.string.link_news)) { uriHandler.openUri(AppLinks.NEWS) }
+            LinkText(stringResourceSafe(R.string.link_accessibility)) { uriHandler.openUri(AppLinks.ACCESSIBILITY) }
+            LinkText(stringResourceSafe(R.string.link_trademarks)) { uriHandler.openUri(AppLinks.TRADEMARKS) }
+        }
+    }
+}
+
+@Composable
+private fun LinkText(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(vertical = 5.dp, horizontal = 2.dp),
+    )
 }
 
 @Composable

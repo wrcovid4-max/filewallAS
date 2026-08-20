@@ -43,6 +43,15 @@
     <string name="empty_archive">The Archive is empty. Archive files to tuck them away without deleting them.</string>
 
     <!-- Recently Deleted &amp; Archive -->
+    <string name="link_website">Website</string>
+    <string name="link_platforms">Platforms</string>
+    <string name="link_download">Download</string>
+    <string name="link_support">Support</string>
+    <string name="link_privacy">Privacy Policy</string>
+    <string name="link_terms">Terms</string>
+    <string name="link_accessibility">Accessibility</string>
+    <string name="link_news">News</string>
+    <string name="link_trademarks">Trademarks</string>
     <string name="show_doc_previews">Document Previews</string>
     <string name="show_doc_previews_desc">Show a cover image on document tiles. Turn off to show a plain document icon instead.</string>
     <string name="recently_deleted">Recently Deleted</string>
