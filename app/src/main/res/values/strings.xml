@@ -43,6 +43,7 @@
     <string name="empty_archive">The Archive is empty. Archive files to tuck them away without deleting them.</string>
 
     <!-- Recently Deleted &amp; Archive -->
+    <string name="about_filewall">About FileWall ↗</string>
     <string name="link_website">Website</string>
     <string name="link_platforms">Platforms</string>
     <string name="link_download">Download</string>

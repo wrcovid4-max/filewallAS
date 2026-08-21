@@ -75,6 +75,7 @@ fun SecurityScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val settings = state.settings
 
     var prompt by remember { mutableStateOf<PassphrasePrompt?>(null) }
@@ -119,6 +120,17 @@ fun SecurityScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         item { SecurityHero() }
+
+        item {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                LinkText(stringResourceSafe(R.string.about_filewall)) {
+                    uriHandler.openUri(AppLinks.WEBSITE)
+                }
+            }
+        }
 
         item { StorageBreakdownCard(state.storage) }
 
@@ -493,6 +505,13 @@ fun SecurityScreen(
                             if (enabled) viewModel.enableAutoBackup() else viewModel.disableAutoBackup()
                         },
                     )
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    LinkText(stringResourceSafe(R.string.link_privacy)) {
+                        uriHandler.openUri(AppLinks.PRIVACY)
+                    }
                 }
             }
         }
