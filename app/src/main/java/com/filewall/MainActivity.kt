@@ -3,9 +3,12 @@ package com.filewall
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
@@ -42,6 +45,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         consumeHandoff(intent)
+        consumeShare(intent)
         requestNotificationPermissionIfNeeded()
 
         // FLAG_SECURE is applied before the first frame and re-applied whenever the
@@ -80,7 +84,48 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         consumeHandoff(intent)
+        consumeShare(intent)
     }
+
+    /**
+     * Files sent to FileWall from another app's Share sheet land here. They're encrypted into
+     * the unlocked vault; the vault list is observing the database, so it refreshes on its own.
+     */
+    private fun consumeShare(intent: Intent?) {
+        if (intent == null) return
+        val uris: List<Uri> = when (intent.action) {
+            Intent.ACTION_SEND -> listOfNotNull(intent.parcelableExtra<Uri>(Intent.EXTRA_STREAM))
+            Intent.ACTION_SEND_MULTIPLE ->
+                intent.parcelableArrayList<Uri>(Intent.EXTRA_STREAM).orEmpty()
+            else -> return
+        }
+        if (uris.isEmpty()) return
+        // Consume it, so a recreation (rotation, process restart) can't re-import the same files.
+        intent.action = null
+
+        lifecycleScope.launch {
+            val result = container.repository.import(uris, hidden = false, folderId = null)
+            val message = when {
+                result.added > 0 -> getString(R.string.imported_from_share, result.added)
+                else -> result.failures.firstOrNull() ?: getString(R.string.import_failed)
+            }
+            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private inline fun <reified T : Parcelable> Intent.parcelableExtra(key: String): T? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getParcelableExtra(key, T::class.java)
+        } else {
+            @Suppress("DEPRECATION") getParcelableExtra(key) as? T
+        }
+
+    private inline fun <reified T : Parcelable> Intent.parcelableArrayList(key: String): ArrayList<T>? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getParcelableArrayListExtra(key, T::class.java)
+        } else {
+            @Suppress("DEPRECATION") getParcelableArrayListExtra(key)
+        }
 
     /** Picks up an item id posted by the watch-handoff notification. */
     private fun consumeHandoff(intent: Intent?) {

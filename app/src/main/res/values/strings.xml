@@ -31,6 +31,8 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
     <string name="action_add_files">Add files</string>
+    <string name="imported_from_share">Added %1$d file(s) to FileWall</string>
+    <string name="import_failed">Couldn\'t add the shared file</string>
     <string name="action_more">More</string>
     <string name="action_archive">Archive</string>
     <string name="action_unarchive">Remove from Archive</string>
