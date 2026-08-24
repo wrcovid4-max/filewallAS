@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -151,7 +151,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 TabItem(Tab.VAULT, tab, Icons.Filled.PhotoLibrary, R.string.tab_open_vault) { tab = it }
                 TabItem(Tab.HIDDEN, tab, Icons.Filled.Lock, R.string.tab_hidden) { tab = it }
-                TabItem(Tab.SECURITY, tab, Icons.Filled.Shield, R.string.tab_security) { tab = it }
+                TabItem(Tab.SECURITY, tab, Icons.Filled.Settings, R.string.tab_security) { tab = it }
             }
         },
     ) { padding ->

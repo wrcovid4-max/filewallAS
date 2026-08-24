@@ -294,12 +294,12 @@ fun VaultScreen(
                                 NewFolderCard(onClick = { dialog = VaultDialog.NewFolder })
                             }
                             items(state.folders, key = { it.folder.id }) { entry ->
-                                // Cover = a file in this folder that actually has a preview
-                                // (newest first); doc-only folders keep the tinted icon, and
-                                // docs are skipped entirely when doc previews are turned off.
+                                // Cover = a photo or video in this folder (newest first).
+                                // Documents never become a folder cover; doc-only folders keep
+                                // the tinted folder icon.
                                 val cover = state.items.firstOrNull {
                                     it.folderId == entry.folder.id && it.thumbName != null &&
-                                        (state.showDocPreviews || it.category != FileCategory.DOC)
+                                        (it.category == FileCategory.PHOTO || it.category == FileCategory.VIDEO)
                                 }
                                 FolderCard(
                                     entry = entry,

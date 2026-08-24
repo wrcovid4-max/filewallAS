@@ -229,41 +229,42 @@ fun SpecialFolderCard(
             Column(
                 Modifier
                     .align(Alignment.Center)
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
                     icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(30.dp),
+                    modifier = Modifier.size(26.dp),
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(5.dp))
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 15.sp,
+                    lineHeight = 14.sp,
                 )
             }
+            // Count sits in the top corner so it never collides with a two-line title.
             if (count > 0) {
                 Row(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
+                        .align(Alignment.TopEnd)
+                        .padding(5.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary)
-                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         Icons.Filled.Layers,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(11.dp),
+                        modifier = Modifier.size(10.dp),
                     )
                     Spacer(Modifier.width(3.dp))
                     Text(

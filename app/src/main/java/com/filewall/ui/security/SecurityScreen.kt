@@ -19,12 +19,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Copyright
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -589,33 +600,6 @@ private object AppLinks {
 }
 
 @Composable
-private fun AboutLinks(modifier: Modifier = Modifier) {
-    val uriHandler = LocalUriHandler.current
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            LinkText(stringResourceSafe(R.string.link_website)) { uriHandler.openUri(AppLinks.WEBSITE) }
-            LinkText(stringResourceSafe(R.string.link_platforms)) { uriHandler.openUri(AppLinks.PLATFORMS) }
-            LinkText(stringResourceSafe(R.string.link_download)) { uriHandler.openUri(AppLinks.DOWNLOAD) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            LinkText(stringResourceSafe(R.string.link_support)) { uriHandler.openUri(AppLinks.SUPPORT) }
-            LinkText(stringResourceSafe(R.string.link_privacy)) { uriHandler.openUri(AppLinks.PRIVACY) }
-            LinkText(stringResourceSafe(R.string.link_terms)) { uriHandler.openUri(AppLinks.TERMS) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            LinkText(stringResourceSafe(R.string.link_news)) { uriHandler.openUri(AppLinks.NEWS) }
-            LinkText(stringResourceSafe(R.string.link_accessibility)) { uriHandler.openUri(AppLinks.ACCESSIBILITY) }
-            LinkText(stringResourceSafe(R.string.link_trademarks)) { uriHandler.openUri(AppLinks.TRADEMARKS) }
-        }
-    }
-}
-
-@Composable
 private fun LinkText(label: String, onClick: () -> Unit) {
     Text(
         text = label,
@@ -625,6 +609,59 @@ private fun LinkText(label: String, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(vertical = 5.dp, horizontal = 2.dp),
     )
+}
+
+private data class LinkEntry(val label: String, val icon: ImageVector, val url: String)
+
+@Composable
+private fun AboutLinks(modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
+    val entries = listOf(
+        LinkEntry(stringResourceSafe(R.string.link_website), Icons.Filled.Language, AppLinks.WEBSITE),
+        LinkEntry(stringResourceSafe(R.string.link_platforms), Icons.Filled.Devices, AppLinks.PLATFORMS),
+        LinkEntry(stringResourceSafe(R.string.link_support), Icons.Filled.SupportAgent, AppLinks.SUPPORT),
+        LinkEntry(stringResourceSafe(R.string.link_news), Icons.Filled.Article, AppLinks.NEWS),
+        LinkEntry(stringResourceSafe(R.string.link_download), Icons.Filled.Download, AppLinks.DOWNLOAD),
+        LinkEntry(stringResourceSafe(R.string.link_privacy), Icons.Filled.Shield, AppLinks.PRIVACY),
+        LinkEntry(stringResourceSafe(R.string.link_terms), Icons.Filled.Description, AppLinks.TERMS),
+        LinkEntry(stringResourceSafe(R.string.link_accessibility), Icons.Filled.Accessibility, AppLinks.ACCESSIBILITY),
+        LinkEntry(stringResourceSafe(R.string.link_trademarks), Icons.Filled.Copyright, AppLinks.TRADEMARKS),
+    )
+    SectionCard(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Info, null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                stringResourceSafe(R.string.about_and_links),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        entries.forEach { entry ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable { uriHandler.openUri(entry.url) }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    entry.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    entry.label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
 }
 
 @Composable

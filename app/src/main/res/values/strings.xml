@@ -5,7 +5,7 @@
     <!-- Bottom navigation -->
     <string name="tab_open_vault">Open Vault</string>
     <string name="tab_hidden">Hidden</string>
-    <string name="tab_security">Security</string>
+    <string name="tab_security">Settings</string>
 
     <!-- Vault -->
     <string name="storage_used">%1$s USED</string>
@@ -46,6 +46,7 @@
 
     <!-- Recently Deleted &amp; Archive -->
     <string name="about_filewall">About FileWall ↗</string>
+    <string name="about_and_links">About &amp; Links</string>
     <string name="link_website">Website</string>
     <string name="link_platforms">Platforms</string>
     <string name="link_download">Download</string>
