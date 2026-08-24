@@ -45,7 +45,7 @@ fun SplashScreen(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.height(22.dp))
             Text(
-                text = "© WR COVID YT",
+                text = "© 2026 WR COVID YT",
                 color = Color.White.copy(alpha = 0.82f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,

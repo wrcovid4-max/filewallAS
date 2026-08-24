@@ -141,7 +141,7 @@
     <string name="auto_backup_desc">Uploads the encrypted archive once a day on Wi-Fi. Your passphrase is sealed with a device-only key so the schedule can run unattended.</string>
     <string name="last_backup">Last backup: %1$s</string>
     <string name="last_backup_never">No backup in Drive yet</string>
-    <string name="copyright">© 2026 Vault Security Lab</string>
+    <string name="copyright">© 2026 WR COVID YT</string>
 
     <!-- Wear handoff -->
     <string name="handoff_channel">Opened from your watch</string>
