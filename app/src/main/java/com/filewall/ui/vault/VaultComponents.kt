@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -174,8 +175,8 @@ private fun SortField.label(): String = stringResourceSafe(
 )
 
 // Folder tiles are deliberately compact so more fit across the row.
-private val FolderCardWidth = 124.dp
-private val FolderCardHeight = 112.dp
+private val FolderCardWidth = 102.dp
+private val FolderCardHeight = 92.dp
 
 /** The dashed "+ New Folder" tile that opens the folder grid. */
 @Composable
@@ -249,14 +250,28 @@ fun SpecialFolderCard(
                 )
             }
             if (count > 0) {
-                Text(
-                    text = "$count",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(10.dp),
-                )
+                        .padding(6.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Filled.Layers,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(11.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = "$count",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
             }
         }
     }
@@ -389,14 +404,31 @@ fun FolderCard(
             }
 
             if (entry.itemCount > 0) {
-                Text(
-                    text = "${entry.itemCount}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (hasCover) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                // A count pill reads clearly over both a cover photo and the tinted tile.
+                val pillBg = if (hasCover) Color.Black.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
+                val pillFg = if (hasCover) Color.White else MaterialTheme.colorScheme.onPrimary
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(8.dp),
-                )
+                        .padding(6.dp)
+                        .clip(CircleShape)
+                        .background(pillBg)
+                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Filled.Layers,
+                        contentDescription = null,
+                        tint = pillFg,
+                        modifier = Modifier.size(11.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = "${entry.itemCount}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = pillFg,
+                    )
+                }
             }
         }
     }

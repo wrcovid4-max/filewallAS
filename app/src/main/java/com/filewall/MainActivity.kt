@@ -12,7 +12,11 @@ import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -21,7 +25,9 @@ import androidx.lifecycle.lifecycleScope
 import com.filewall.data.settings.VaultSettings
 import com.filewall.data.wear.HandoffNotifier
 import com.filewall.ui.FileWallRoot
+import com.filewall.ui.SplashScreen
 import com.filewall.ui.theme.FileWallTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -63,7 +69,16 @@ class MainActivity : FragmentActivity() {
                 .collectAsStateWithLifecycle(initialValue = VaultSettings())
 
             FileWallTheme(themeMode = settings.theme) {
-                FileWallRoot(container = container)
+                var showSplash by remember { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    delay(1500)
+                    showSplash = false
+                }
+                if (showSplash) {
+                    SplashScreen()
+                } else {
+                    FileWallRoot(container = container)
+                }
             }
         }
     }

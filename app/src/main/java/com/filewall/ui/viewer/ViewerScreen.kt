@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -157,29 +158,51 @@ fun ViewerScreen(
                     .fillMaxWidth()
                     .pointerInput(item.id, zoomable) {
                         if (!zoomable) return@pointerInput
-                        // Two-finger gesture only: pinch to zoom, drag-with-two-fingers to pan.
-                        // A single finger is left untouched so a PDF's page list and the video
-                        // controls still scroll/seek normally.
+                        // Pinch (2 fingers) zooms and pans; once zoomed in, a single finger
+                        // pans too. At 1x a single finger is left untouched so a PDF's page
+                        // list and the video controls still scroll/seek.
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             do {
                                 val event = awaitPointerEvent()
                                 val pressed = event.changes.count { it.pressed }
-                                if (pressed >= 2) {
-                                    val zoom = event.calculateZoom()
-                                    val pan = event.calculatePan()
-                                    scale = (scale * zoom).coerceIn(1f, 6f)
-                                    if (scale > 1f) {
+                                when {
+                                    pressed >= 2 -> {
+                                        scale = (scale * event.calculateZoom()).coerceIn(1f, 6f)
+                                        val pan = event.calculatePan()
+                                        if (scale > 1f) {
+                                            offsetX += pan.x
+                                            offsetY += pan.y
+                                        } else {
+                                            offsetX = 0f
+                                            offsetY = 0f
+                                        }
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                    pressed == 1 && scale > 1f -> {
+                                        val pan = event.calculatePan()
                                         offsetX += pan.x
                                         offsetY += pan.y
-                                    } else {
-                                        offsetX = 0f
-                                        offsetY = 0f
+                                        event.changes.forEach { it.consume() }
                                     }
-                                    event.changes.forEach { it.consume() }
                                 }
                             } while (event.changes.any { it.pressed })
                         }
+                    }
+                    .pointerInput(item.id, zoomable) {
+                        // Double-tap to zoom in/out (not on video — the player owns taps there).
+                        if (!zoomable || item.category == FileCategory.VIDEO) return@pointerInput
+                        detectTapGestures(
+                            onDoubleTap = {
+                                if (scale > 1f) {
+                                    scale = 1f
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                } else {
+                                    scale = 2.5f
+                                }
+                            },
+                        )
                     },
                 contentAlignment = Alignment.Center,
             ) {
