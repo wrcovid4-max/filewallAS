@@ -1,5 +1,6 @@
 package com.filewall.ui.common
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.filewall.R
@@ -50,20 +52,33 @@ import com.filewall.util.formatBytes
 /** The persistent "FileWall / 269.4 MB USED" masthead every tab sits under. */
 @Composable
 fun VaultHeader(totalBytes: Long, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) {
-        Text(
-            text = stringResourceSafe(R.string.app_name),
-            // headlineMedium rather than displaySmall: the masthead was the biggest driver
-            // of the "everything is huge" feel.
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+    Row(
+        modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_art),
+            contentDescription = null,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(11.dp)),
         )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = stringResourceSafe(R.string.storage_used, formatBytes(totalBytes)),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                text = stringResourceSafe(R.string.app_name),
+                // headlineMedium rather than displaySmall: the masthead was the biggest driver
+                // of the "everything is huge" feel.
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = stringResourceSafe(R.string.storage_used, formatBytes(totalBytes)),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

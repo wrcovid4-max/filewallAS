@@ -2,6 +2,7 @@ package com.filewall.ui.security
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -634,11 +635,12 @@ private fun SecurityHero(modifier: Modifier = Modifier) {
             .padding(top = 24.dp, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_shield),
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_art),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(96.dp),
+            modifier = Modifier
+                .size(96.dp)
+                .clip(MaterialTheme.shapes.large),
         )
         Spacer(Modifier.height(24.dp))
         Text(
