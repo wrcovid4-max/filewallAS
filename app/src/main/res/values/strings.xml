@@ -41,6 +41,7 @@
     <string name="action_empty">Empty</string>
     <string name="empty_vault">Nothing here yet. Tap the upload button to bring files into the vault.</string>
     <string name="empty_search">No files match “%1$s”.</string>
+    <string name="search_prompt">Type to search your files by name.</string>
     <string name="empty_trash">Recently Deleted is empty.</string>
     <string name="empty_archive">The Archive is empty. Archive files to tuck them away without deleting them.</string>
 

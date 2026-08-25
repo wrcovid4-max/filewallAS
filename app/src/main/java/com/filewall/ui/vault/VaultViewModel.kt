@@ -301,6 +301,13 @@ class VaultViewModel(
         null
     }
 
+    /** Bulk move: sends every selected file into (or out of) a folder in one action. */
+    fun moveItems(items: List<VaultItem>, folderId: String?) = runGuarded {
+        items.forEach { repository.move(it, folderId) }
+        selection.value = emptySet()
+        if (items.size == 1) "Moved \"${items.first().name}\"" else "Moved ${items.size} files"
+    }
+
     fun setHidden(items: List<VaultItem>, hidden: Boolean) = runGuarded {
         repository.setHidden(items.map { it.id }, hidden)
         selection.value = emptySet()

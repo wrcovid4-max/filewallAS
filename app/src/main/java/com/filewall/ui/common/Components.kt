@@ -161,12 +161,17 @@ fun VaultSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier.fillMaxWidth(),
-        singleLine = true,
+    Box(modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            // When onClick is set this field is a button that opens the search screen — it
+            // never takes focus or the keyboard itself (a clickable overlay intercepts taps).
+            readOnly = onClick != null,
         shape = MaterialTheme.shapes.medium,
         leadingIcon = {
             Icon(
@@ -188,7 +193,17 @@ fun VaultSearchField(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
-    )
+        )
+        if (onClick != null) {
+            // Transparent overlay that swallows the tap and opens the dedicated search screen.
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable(onClick = onClick),
+            )
+        }
+    }
 }
 
 /** Title + description on the left, switch on the right. */

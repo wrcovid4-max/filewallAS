@@ -82,6 +82,7 @@ private sealed interface VaultDialog {
     data object EmptyTrash : VaultDialog
     data class RenameItem(val item: VaultItem) : VaultDialog
     data class MoveItem(val item: VaultItem) : VaultDialog
+    data class MoveItems(val items: List<VaultItem>) : VaultDialog
 }
 
 @Composable
@@ -97,6 +98,7 @@ fun VaultScreen(
     val moveFolders by viewModel.moveFolders.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<VaultDialog?>(null) }
+    var searchActive by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
@@ -116,7 +118,15 @@ fun VaultScreen(
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.padding(horizontal = 20.dp)) {
-                VaultSearchField(query = state.query, onQueryChange = viewModel::setQuery)
+                VaultSearchField(
+                    query = state.query,
+                    onQueryChange = viewModel::setQuery,
+                    // Tapping opens the dedicated full-screen search (searches the whole side).
+                    onClick = {
+                        viewModel.openFolder(null)
+                        searchActive = true
+                    },
+                )
                 Spacer(Modifier.height(14.dp))
                 VaultFilterToggle(selected = state.filter, onSelect = viewModel::setFilter)
             }
@@ -154,6 +164,7 @@ fun VaultScreen(
                     },
                     onUnarchive = { viewModel.unarchive(selectedItems) },
                     onRestore = { viewModel.restore(selectedItems) },
+                    onMoveToFolder = { dialog = VaultDialog.MoveItems(selectedItems) },
                     onDelete = { dialog = VaultDialog.DeleteItems(selectedItems) },
                     onDeleteForever = { dialog = VaultDialog.DeleteForever(selectedItems) },
                     onCancel = viewModel::clearSelection,
@@ -464,6 +475,25 @@ fun VaultScreen(
                 )
             }
         }
+
+        if (searchActive) {
+            SearchOverlay(
+                query = state.query,
+                onQueryChange = viewModel::setQuery,
+                results = state.items,
+                thumbnails = viewModel.thumbnails,
+                previewDocs = state.showDocPreviews,
+                onOpenItem = { item ->
+                    searchActive = false
+                    viewModel.setQuery("")
+                    onOpenItem(item)
+                },
+                onClose = {
+                    searchActive = false
+                    viewModel.setQuery("")
+                },
+            )
+        }
     }
 
     VaultDialogHost(
@@ -482,6 +512,7 @@ private fun SelectionActions(
     onToggleHidden: () -> Unit,
     onUnarchive: () -> Unit,
     onRestore: () -> Unit,
+    onMoveToFolder: () -> Unit,
     onDelete: () -> Unit,
     onDeleteForever: () -> Unit,
     onCancel: () -> Unit,
@@ -512,6 +543,7 @@ private fun SelectionActions(
             }
             SpecialView.ARCHIVE -> {
                 PillLabelButton(Icons.Filled.Unarchive, stringResourceSafe(R.string.action_unarchive), onContainer, count > 0, onUnarchive)
+                PillIconButton(Icons.Filled.DriveFileMove, stringResourceSafe(R.string.action_move), onContainer, count > 0, onMoveToFolder)
                 PillIconButton(Icons.Filled.Delete, stringResourceSafe(R.string.action_delete), MaterialTheme.colorScheme.error, count > 0, onDelete)
             }
             SpecialView.NONE -> {
@@ -522,6 +554,7 @@ private fun SelectionActions(
                     count > 0,
                     onToggleHidden,
                 )
+                PillIconButton(Icons.Filled.DriveFileMove, stringResourceSafe(R.string.action_move), onContainer, count > 0, onMoveToFolder)
                 PillIconButton(Icons.Filled.Delete, stringResourceSafe(R.string.action_delete), MaterialTheme.colorScheme.error, count > 0, onDelete)
             }
         }
@@ -587,6 +620,16 @@ private fun VaultDialogHost(
             onDismiss = onDismiss,
             onPick = { folderId ->
                 viewModel.move(dialog.item, folderId)
+                onDismiss()
+            },
+        )
+
+        is VaultDialog.MoveItems -> MoveToFolderDialog(
+            folders = moveFolders,
+            currentFolderId = null,
+            onDismiss = onDismiss,
+            onPick = { folderId ->
+                viewModel.moveItems(dialog.items, folderId)
                 onDismiss()
             },
         )

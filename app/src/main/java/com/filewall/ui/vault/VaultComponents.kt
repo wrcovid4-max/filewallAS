@@ -98,15 +98,23 @@ fun VaultToolbar(
         ) {
             Text(
                 text = stringResourceSafe(R.string.item_count, itemCount),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
 
             Box(Modifier.weight(1f, fill = false)) {
-                TextButton(onClick = { sortMenuOpen = true }) {
-                    Icon(Icons.Filled.Sort, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(
+                    onClick = { sortMenuOpen = true },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Sort,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         sortField.label(),
@@ -133,23 +141,23 @@ fun VaultToolbar(
         }
 
         // Compact trailing controls (40dp taps) so all three always fit on narrow screens.
-        IconButton(onClick = onToggleDirection, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onToggleDirection, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = if (sortAscending) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(20.dp),
             )
         }
-        IconButton(onClick = onToggleView, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onToggleView, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = if (gridView) Icons.Filled.ViewList else Icons.Filled.GridView,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(20.dp),
             )
         }
-        IconButton(onClick = onToggleSelection, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onToggleSelection, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = if (selectionMode) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                 contentDescription = null,
@@ -158,7 +166,7 @@ fun VaultToolbar(
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -408,20 +416,22 @@ fun FolderCard(
                 // A count pill reads clearly over both a cover photo and the tinted tile.
                 val pillBg = if (hasCover) Color.Black.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
                 val pillFg = if (hasCover) Color.White else MaterialTheme.colorScheme.onPrimary
+                // Top-left: the overflow menu owns the top-right, the name owns the bottom,
+                // so this corner never collides with either.
                 Row(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
+                        .align(Alignment.TopStart)
+                        .padding(5.dp)
                         .clip(CircleShape)
                         .background(pillBg)
-                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         Icons.Filled.Layers,
                         contentDescription = null,
                         tint = pillFg,
-                        modifier = Modifier.size(11.dp),
+                        modifier = Modifier.size(10.dp),
                     )
                     Spacer(Modifier.width(3.dp))
                     Text(
