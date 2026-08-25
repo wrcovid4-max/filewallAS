@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Firebase connection values. Fill these from your existing FIREWALL project so no
+  google-services.json / google-services plugin is needed (which would fail the build if the
+  file were missing). While the required three are blank, Firebase sync stays OFF and the app
+  behaves exactly as before.
+
+  Firebase console -> Project settings -> General -> Your apps (the com.filewall Android app):
+    firebase_app_id        = "App ID"           e.g. 1:1234567890:android:abcdef123456
+    firebase_api_key       = "Web API Key"      e.g. AIzaSy...
+    firebase_project_id    = "Project ID"       e.g. filewall-xxxxx
+    firebase_storage_bucket= "storageBucket"    e.g. filewall-xxxxx.appspot.com (optional; derived if blank)
+  Authentication -> Sign-in method -> Google, or Project settings -> the "Web client (auto created…)":
+    firebase_web_client_id = "Web client ID"    e.g. 1234567890-xxxx.apps.googleusercontent.com
+-->
+<resources>
+    <string name="firebase_app_id" translatable="false"></string>
+    <string name="firebase_api_key" translatable="false"></string>
+    <string name="firebase_project_id" translatable="false"></string>
+    <string name="firebase_storage_bucket" translatable="false"></string>
+    <string name="firebase_web_client_id" translatable="false"></string>
+</resources>

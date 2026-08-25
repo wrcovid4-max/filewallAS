@@ -90,6 +90,14 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // Firebase — Auth/Firestore/Storage sync (see FIREBASE_BLUEPRINT.md). Initialised
+    // manually from res/values/firebase.xml, so no google-services plugin and no build-time
+    // google-services.json requirement; stays inert until the config is filled in.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
+
     implementation(libs.play.services.wearable)
     implementation(libs.play.services.auth)
     implementation(libs.okhttp)

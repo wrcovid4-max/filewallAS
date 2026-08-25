@@ -22,6 +22,10 @@ class FileWallApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Bring Firebase up only if res/values/firebase.xml is filled in; otherwise a no-op
+        // and the app runs entirely offline as before.
+        com.filewall.data.firebase.FirebaseGate.init(this)
+
         // A previous run may have died with plaintext still in the preview cache.
         container.repository.clearPreviewCache()
 
