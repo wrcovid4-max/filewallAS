@@ -18,11 +18,9 @@ many Android apps.
 
 ## Steps (reuse the existing `FIREWALL` project)
 
-1. **Get the signing fingerprint** of the build. In the project root:
-   ```
-   ./gradlew signingReport
-   ```
-   Under `Variant: debug`, copy the **SHA1** line (and **SHA-256** if it asks for one).
+1. **Get the signing fingerprint** of the build — already fixed for you, see the SHA-1
+   below. (Only re-run `./gradlew signingReport` if you ever change what
+   `keystore/debug.keystore` points to.)
 
 2. **Firebase console → your `FIREWALL` project → Add app → Android:**
    - Android package name: **`com.filewall`**
@@ -46,11 +44,27 @@ many Android apps.
 
 ## ⚠️ If you wipe/reinstall the Mac
 
+This no longer applies as of the shared `keystore/debug.keystore` committed to this repo —
+debug builds are pinned to it (`app/build.gradle.kts`), so the SHA-1 below is fixed
+permanently and a Mac wipe can't change it. Skip straight to registering it once and you're
+done for good.
+
+**Debug SHA-1 (register this in Firebase console → your `FIREWALL` project → the
+`com.filewall` Android app):**
+```
+EF:35:C9:EA:2D:DF:92:EB:57:9E:EA:CF:44:39:61:5C:B8:A7:B3:01
+```
+
+<details>
+<summary>Old advice, kept for history</summary>
+
 The debug key at `~/.android/debug.keystore` is regenerated on a fresh machine, so its SHA-1
 **changes** and the one you registered stops matching. Either:
 - do this setup **after** the wipe with the new SHA-1, or
 - copy `~/.android/debug.keystore` off the Mac first and restore it, so the SHA-1 never
   changes.
+
+</details>
 
 For a release build, register the **release** keystore's SHA-1 too (get it from
 `signingReport` under `Variant: release`, or `keytool -list -v -keystore <your.jks>`).
