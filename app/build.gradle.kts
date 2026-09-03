@@ -21,9 +21,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("../keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
+            // Pinned to keystore/debug.keystore (see .gitignore) instead of the
+            // machine's ~/.android/debug.keystore, whose SHA-1 changes on every
+            // fresh install/wipe and silently breaks the Google Drive OAuth
+            // client registered for this SHA-1 (GOOGLE_SETUP.md). This keeps
+            // Drive sign-in working across wipes without re-registering anything.
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = true
@@ -34,6 +49,8 @@ android {
             )
         }
     }
+
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

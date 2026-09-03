@@ -11,4 +11,10 @@
 local.properties
 *.jks
 *.keystore
+# Exception: a shared debug-only keystore, committed on purpose. Debug builds
+# use Android's default alias/password ("androiddebugkey"/"android") and this
+# key can never sign a release, so there's no risk in version-controlling it —
+# the whole point is that its SHA-1 stays fixed even after a machine wipe
+# regenerates ~/.android/debug.keystore. See GOOGLE_SETUP.md.
+!keystore/debug.keystore
 google-services.json
