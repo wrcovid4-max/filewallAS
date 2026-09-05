@@ -7,9 +7,14 @@ import com.filewall.data.backup.VaultArchive
 import com.filewall.data.crypto.PinManager
 import com.filewall.data.crypto.VaultCrypto
 import com.filewall.data.db.VaultDatabase
+import com.filewall.data.firebase.FirebaseAuthManager
+import com.filewall.data.firebase.FirebaseGate
+import com.filewall.data.firebase.FirebaseSyncManager
 import com.filewall.data.media.ThumbnailStore
 import com.filewall.data.repo.VaultRepository
 import com.filewall.data.settings.SettingsStore
+import com.filewall.data.sync.SyncCoordinator
+import com.filewall.data.sync.SyncPassphraseStore
 import com.filewall.data.wear.WearSyncManager
 import com.filewall.ui.lock.LockController
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +52,16 @@ class AppContainer(context: Context, appScope: CoroutineScope) {
     val autoBackupSecret: AutoBackupSecret by lazy { AutoBackupSecret(appContext) }
 
     val wearSync: WearSyncManager by lazy { WearSyncManager(appContext, repository, settings) }
+
+    // ---- Firebase cloud sync (FIREBASE_BLUEPRINT.md) ----
+    // FirebaseGate.init() already ran in FileWallApp.onCreate(); these are no-ops to construct
+    // even when it returned false — every real Firebase call inside them checks FirebaseGate.
+    val firebaseAuth: FirebaseAuthManager by lazy { FirebaseAuthManager(appContext) }
+    val firebaseSync: FirebaseSyncManager by lazy { FirebaseSyncManager(firebaseAuth) }
+    val syncPassphrase: SyncPassphraseStore by lazy { SyncPassphraseStore(appContext) }
+    val syncCoordinator: SyncCoordinator by lazy {
+        SyncCoordinator(appContext, repository, settings, firebaseAuth, firebaseSync, syncPassphrase)
+    }
 
     val lock: LockController by lazy {
         LockController(settings, repository, thumbnails, appScope)

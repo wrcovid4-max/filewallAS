@@ -21,7 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Copyright
 import androidx.compose.material.icons.filled.Description
@@ -77,6 +81,7 @@ import com.filewall.util.formatDuration
 private sealed interface PassphrasePrompt {
     data class ExportLocal(val destination: android.net.Uri) : PassphrasePrompt
     data class RestoreLocal(val source: android.net.Uri) : PassphrasePrompt
+    data object SetSyncPassphrase : PassphrasePrompt
 }
 
 @Composable
@@ -113,6 +118,10 @@ fun SecurityScreen(
     val signInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result -> viewModel.onSignInResult(result.data) }
+
+    val cloudSignInLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result -> viewModel.onCloudSignInResult(result.data) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(VaultArchive.MIME_TYPE),
@@ -411,6 +420,89 @@ fun SecurityScreen(
 
         item {
             SectionCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResourceSafe(R.string.firebase_sync_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    CloudSyncStatusIcon(state.cloudStatus)
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    stringResourceSafe(R.string.firebase_sync_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+
+                when {
+                    !state.cloudSyncAvailable -> Text(
+                        stringResourceSafe(R.string.firebase_sync_unconfigured),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+
+                    !state.cloudSignedIn -> Button(
+                        onClick = { cloudSignInLauncher.launch(viewModel.cloudSignInIntent) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.extraLarge,
+                    ) {
+                        Text(stringResourceSafe(R.string.sign_in_google))
+                    }
+
+                    else -> {
+                        Text(
+                            CloudSyncStatusText(state.cloudStatus),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(14.dp))
+
+                        if (!state.cloudHasPassphrase) {
+                            Text(
+                                stringResourceSafe(R.string.sync_passphrase_needed),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Button(
+                                onClick = { prompt = PassphrasePrompt.SetSyncPassphrase },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.extraLarge,
+                            ) {
+                                Text(stringResourceSafe(R.string.set_sync_passphrase))
+                            }
+                            Spacer(Modifier.height(10.dp))
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(
+                                onClick = { viewModel.syncNow() },
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.extraLarge,
+                                enabled = state.cloudStatus !is com.filewall.data.sync.SyncStatus.Syncing,
+                            ) {
+                                Icon(Icons.Filled.CloudSync, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResourceSafe(R.string.sync_now))
+                            }
+                            IconButton(onClick = { viewModel.signOutOfCloud() }) {
+                                Icon(
+                                    Icons.Filled.Logout,
+                                    contentDescription = stringResourceSafe(R.string.sign_out),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            SectionCard {
                 Text(
                     stringResourceSafe(R.string.cloud_backup),
                     style = MaterialTheme.typography.titleLarge,
@@ -562,6 +654,21 @@ fun SecurityScreen(
     }
 
     prompt?.let { current ->
+        if (current is PassphrasePrompt.SetSyncPassphrase) {
+            PassphraseDialog(
+                title = stringResourceSafe(R.string.sync_passphrase_label),
+                hint = stringResourceSafe(R.string.sync_passphrase_hint),
+                confirmLabel = stringResourceSafe(R.string.set_sync_passphrase),
+                minLength = VaultArchive.MIN_PASSPHRASE_LENGTH,
+                onDismiss = { prompt = null },
+                onConfirm = { passphrase ->
+                    viewModel.setSyncPassphrase(passphrase)
+                    prompt = null
+                },
+            )
+            return@let
+        }
+
         // Only the local .fwvault export/import still asks for a passphrase — Drive backup is
         // sign-in only and keys itself from the account's managed key.
         val writing = current is PassphrasePrompt.ExportLocal
@@ -578,6 +685,7 @@ fun SecurityScreen(
                 when (current) {
                     is PassphrasePrompt.ExportLocal -> viewModel.exportArchive(current.destination, passphrase)
                     is PassphrasePrompt.RestoreLocal -> viewModel.restoreArchive(current.source, passphrase)
+                    is PassphrasePrompt.SetSyncPassphrase -> Unit
                 }
                 prompt = null
             },
@@ -609,6 +717,48 @@ private fun LinkText(label: String, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(vertical = 5.dp, horizontal = 2.dp),
     )
+}
+
+/**
+ * The persistent "is it syncing right now" indicator for the Cloud Sync card. The transient
+ * popup for the same state lives in [SecurityViewModel.syncNow] via the shared Snackbar
+ * channel — this is the always-visible counterpart, so the answer to "is it working" doesn't
+ * require triggering a sync to find out.
+ */
+@Composable
+private fun CloudSyncStatusIcon(status: com.filewall.data.sync.SyncStatus) {
+    when (status) {
+        is com.filewall.data.sync.SyncStatus.Syncing ->
+            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+        is com.filewall.data.sync.SyncStatus.Synced -> Icon(
+            Icons.Filled.CloudDone,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        is com.filewall.data.sync.SyncStatus.Error -> Icon(
+            Icons.Filled.CloudOff,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+        )
+        else -> Icon(
+            Icons.Filled.CloudQueue,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun CloudSyncStatusText(status: com.filewall.data.sync.SyncStatus): String = when (status) {
+    is com.filewall.data.sync.SyncStatus.SignedOut -> stringResourceSafe(R.string.sync_status_signed_out)
+    is com.filewall.data.sync.SyncStatus.Idle -> stringResourceSafe(R.string.sync_status_idle)
+    is com.filewall.data.sync.SyncStatus.Syncing -> status.label
+    is com.filewall.data.sync.SyncStatus.Synced -> stringResourceSafe(
+        R.string.sync_status_synced,
+        android.text.format.DateFormat.getTimeFormat(androidx.compose.ui.platform.LocalContext.current)
+            .format(java.util.Date(status.atEpochMs)),
+    )
+    is com.filewall.data.sync.SyncStatus.Error -> stringResourceSafe(R.string.sync_status_error, status.message)
 }
 
 private data class LinkEntry(val label: String, val icon: ImageVector, val url: String)

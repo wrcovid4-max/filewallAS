@@ -52,6 +52,7 @@ import com.filewall.ui.vault.VaultViewModel
 import com.filewall.ui.viewer.VaultPdfViewer
 import com.filewall.ui.viewer.VaultVideoPlayer
 import com.filewall.ui.viewer.ViewerScreen
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -103,6 +104,22 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
         launch { vaultViewModel.messages.collect { snackbarHost.showSnackbar(it) } }
         launch { securityViewModel.messages.collect { snackbarHost.showSnackbar(it) } }
         launch { securityViewModel.consentRequests.collect { consentLauncher.launch(it) } }
+
+        // Push-on-mutation without a hook on every VaultRepository call site: any local edit —
+        // unlocked or hidden side, files or folders — ticks this combined flow, and a change is
+        // followed by a debounced sync a few seconds later once things settle. Silent
+        // (announce = false): a manual "Sync now" still pops the Snackbar, this one doesn't
+        // spam it on every keystroke-level edit.
+        launch {
+            kotlinx.coroutines.flow.combine(
+                container.repository.observeItems(hidden = false),
+                container.repository.observeItems(hidden = true),
+                container.repository.observeFolders(hidden = false),
+                container.repository.observeFolders(hidden = true),
+            ) { a, b, c, d -> a.size + b.size + c.size + d.size }
+                .debounce(3_000)
+                .collect { securityViewModel.syncNow(announce = false) }
+        }
 
         // A watch handoff notification names an item; open it, then clear the request so a
         // configuration change does not re-open it behind the user's back.
