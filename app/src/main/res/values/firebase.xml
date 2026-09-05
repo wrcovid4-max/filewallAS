@@ -14,9 +14,9 @@
     firebase_web_client_id = "Web client ID"    e.g. 1234567890-xxxx.apps.googleusercontent.com
 -->
 <resources>
-    <string name="firebase_app_id" translatable="false"></string>
-    <string name="firebase_api_key" translatable="false"></string>
-    <string name="firebase_project_id" translatable="false"></string>
-    <string name="firebase_storage_bucket" translatable="false"></string>
-    <string name="firebase_web_client_id" translatable="false"></string>
+    <string name="firebase_app_id" translatable="false">1:331932361656:android:6a32488340b002f6ff654d</string>
+    <string name="firebase_api_key" translatable="false">AIzaSyCt7BSnXIof8qTFz3UmKDO0gYMlHK8FH90</string>
+    <string name="firebase_project_id" translatable="false">filewall-21cb8</string>
+    <string name="firebase_storage_bucket" translatable="false">filewall-21cb8.firebasestorage.app</string>
+    <string name="firebase_web_client_id" translatable="false">331932361656-1k1kin4bp5n4vmil7ru095jkldk5qf5l.apps.googleusercontent.com</string>
 </resources>
