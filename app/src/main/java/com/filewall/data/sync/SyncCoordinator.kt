@@ -55,11 +55,11 @@ class SyncCoordinator(
 
     private val cursorPrefs = context.getSharedPreferences("filewall_sync_cursor", Context.MODE_PRIVATE)
 
-    private val _status = MutableStateFlow<SyncStatus>(if (auth.uid != null) SyncStatus.Idle else SyncStatus.SignedOut)
+    private val _status = MutableStateFlow<SyncStatus>(if (isSignedIn) SyncStatus.Idle else SyncStatus.SignedOut)
     val status: StateFlow<SyncStatus> = _status.asStateFlow()
 
     val isAvailable: Boolean get() = FirebaseGate.isConfigured
-    val isSignedIn: Boolean get() = auth.uid != null
+    val isSignedIn: Boolean get() = isAvailable && auth.uid != null
     val hasSyncPassphrase: Boolean get() = passphraseStore.isStored
     val signInIntent: Intent get() = auth.signInIntent
 
