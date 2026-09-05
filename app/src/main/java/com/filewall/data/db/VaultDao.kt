@@ -50,6 +50,9 @@ interface VaultDao {
     @Query("SELECT * FROM vault_items")
     suspend fun allItems(): List<VaultItem>
 
+    @Query("SELECT * FROM vault_items WHERE updatedAt > :cursor")
+    suspend fun itemsUpdatedSince(cursor: Long): List<VaultItem>
+
     @Query("SELECT * FROM vault_items WHERE folderId = :folderId")
     suspend fun itemsInFolder(folderId: String): List<VaultItem>
 
@@ -87,24 +90,24 @@ interface VaultDao {
     @Query("DELETE FROM vault_items WHERE id IN (:ids)")
     suspend fun deleteItemsByIds(ids: List<String>)
 
-    @Query("UPDATE vault_items SET folderId = :folderId WHERE id = :id")
-    suspend fun setItemFolder(id: String, folderId: String?)
+    @Query("UPDATE vault_items SET folderId = :folderId, updatedAt = :timestamp WHERE id = :id")
+    suspend fun setItemFolder(id: String, folderId: String?, timestamp: Long)
 
-    @Query("UPDATE vault_items SET hidden = :hidden WHERE id IN (:ids)")
-    suspend fun setItemsHidden(ids: List<String>, hidden: Boolean)
+    @Query("UPDATE vault_items SET hidden = :hidden, updatedAt = :timestamp WHERE id IN (:ids)")
+    suspend fun setItemsHidden(ids: List<String>, hidden: Boolean, timestamp: Long)
 
-    @Query("UPDATE vault_items SET name = :name WHERE id = :id")
-    suspend fun renameItem(id: String, name: String)
+    @Query("UPDATE vault_items SET name = :name, updatedAt = :timestamp WHERE id = :id")
+    suspend fun renameItem(id: String, name: String, timestamp: Long)
 
     // Trashing also clears the archive flag so a file lives in exactly one place at a time.
-    @Query("UPDATE vault_items SET deletedAt = :timestamp, archived = 0 WHERE id IN (:ids)")
+    @Query("UPDATE vault_items SET deletedAt = :timestamp, archived = 0, updatedAt = :timestamp WHERE id IN (:ids)")
     suspend fun trashItems(ids: List<String>, timestamp: Long)
 
-    @Query("UPDATE vault_items SET deletedAt = 0, archived = 0 WHERE id IN (:ids)")
-    suspend fun restoreItems(ids: List<String>)
+    @Query("UPDATE vault_items SET deletedAt = 0, archived = 0, updatedAt = :timestamp WHERE id IN (:ids)")
+    suspend fun restoreItems(ids: List<String>, timestamp: Long)
 
-    @Query("UPDATE vault_items SET archived = :archived WHERE id IN (:ids)")
-    suspend fun setItemsArchived(ids: List<String>, archived: Boolean)
+    @Query("UPDATE vault_items SET archived = :archived, updatedAt = :timestamp WHERE id IN (:ids)")
+    suspend fun setItemsArchived(ids: List<String>, archived: Boolean, timestamp: Long)
 
     // ---------------------------------------------------------------- folders
 
@@ -117,6 +120,9 @@ interface VaultDao {
     @Query("SELECT * FROM vault_folders")
     suspend fun allFolders(): List<VaultFolder>
 
+    @Query("SELECT * FROM vault_folders WHERE updatedAt > :cursor")
+    suspend fun foldersUpdatedSince(cursor: Long): List<VaultFolder>
+
     @Query("SELECT * FROM vault_folders WHERE id = :id")
     suspend fun findFolder(id: String): VaultFolder?
 
@@ -126,11 +132,11 @@ interface VaultDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertFolders(folders: List<VaultFolder>)
 
-    @Query("UPDATE vault_folders SET name = :name WHERE id = :id")
-    suspend fun renameFolder(id: String, name: String)
+    @Query("UPDATE vault_folders SET name = :name, updatedAt = :timestamp WHERE id = :id")
+    suspend fun renameFolder(id: String, name: String, timestamp: Long)
 
-    @Query("UPDATE vault_folders SET colorIndex = :colorIndex WHERE id = :id")
-    suspend fun recolorFolder(id: String, colorIndex: Int)
+    @Query("UPDATE vault_folders SET colorIndex = :colorIndex, updatedAt = :timestamp WHERE id = :id")
+    suspend fun recolorFolder(id: String, colorIndex: Int, timestamp: Long)
 
     @Query("DELETE FROM vault_folders WHERE id = :id")
     suspend fun deleteFolderRow(id: String)

@@ -116,6 +116,7 @@ class VaultRepository(
                         thumbName = thumbName,
                         width = preview?.sourceWidth ?: 0,
                         height = preview?.sourceHeight ?: 0,
+                        updatedAt = System.currentTimeMillis(),
                     )
                 }
 
@@ -196,6 +197,7 @@ class VaultRepository(
             height = preview?.sourceHeight ?: 0,
             archived = archived,
             deletedAt = deletedAt,
+            updatedAt = System.currentTimeMillis(),
         ).also { dao.upsertItem(it) }
     }
 
@@ -281,15 +283,15 @@ class VaultRepository(
     // ------------------------------------------------------------------ mutation
 
     suspend fun rename(item: VaultItem, name: String) = withContext(Dispatchers.IO) {
-        dao.renameItem(item.id, name.trim().ifBlank { item.name })
+        dao.renameItem(item.id, name.trim().ifBlank { item.name }, System.currentTimeMillis())
     }
 
     suspend fun move(item: VaultItem, folderId: String?) = withContext(Dispatchers.IO) {
-        dao.setItemFolder(item.id, folderId)
+        dao.setItemFolder(item.id, folderId, System.currentTimeMillis())
     }
 
     suspend fun setHidden(ids: List<String>, hidden: Boolean) = withContext(Dispatchers.IO) {
-        dao.setItemsHidden(ids, hidden)
+        dao.setItemsHidden(ids, hidden, System.currentTimeMillis())
     }
 
     /**
@@ -310,11 +312,11 @@ class VaultRepository(
     }
 
     suspend fun restore(items: List<VaultItem>) = withContext(Dispatchers.IO) {
-        dao.restoreItems(items.map { it.id })
+        dao.restoreItems(items.map { it.id }, System.currentTimeMillis())
     }
 
     suspend fun setArchived(items: List<VaultItem>, archived: Boolean) = withContext(Dispatchers.IO) {
-        dao.setItemsArchived(items.map { it.id }, archived)
+        dao.setItemsArchived(items.map { it.id }, archived, System.currentTimeMillis())
     }
 
     /** Empties Recently Deleted for one side of the vault. */
@@ -336,16 +338,17 @@ class VaultRepository(
                 colorIndex = colorIndex,
                 createdAt = System.currentTimeMillis(),
                 hidden = hidden,
+                updatedAt = System.currentTimeMillis(),
             ).also { dao.upsertFolder(it) }
         }
 
     suspend fun renameFolder(id: String, name: String) = withContext(Dispatchers.IO) {
         val trimmed = name.trim()
-        if (trimmed.isNotEmpty()) dao.renameFolder(id, trimmed)
+        if (trimmed.isNotEmpty()) dao.renameFolder(id, trimmed, System.currentTimeMillis())
     }
 
     suspend fun recolorFolder(id: String, colorIndex: Int) = withContext(Dispatchers.IO) {
-        dao.recolorFolder(id, colorIndex)
+        dao.recolorFolder(id, colorIndex, System.currentTimeMillis())
     }
 
     /**
@@ -375,6 +378,44 @@ class VaultRepository(
     suspend fun allItems(): List<VaultItem> = withContext(Dispatchers.IO) { dao.allItems() }
 
     suspend fun allFolders(): List<VaultFolder> = withContext(Dispatchers.IO) { dao.allFolders() }
+
+    suspend fun itemsUpdatedSince(cursor: Long): List<VaultItem> =
+        withContext(Dispatchers.IO) { dao.itemsUpdatedSince(cursor) }
+
+    suspend fun foldersUpdatedSince(cursor: Long): List<VaultFolder> =
+        withContext(Dispatchers.IO) { dao.foldersUpdatedSince(cursor) }
+
+    suspend fun findItem(id: String): VaultItem? = withContext(Dispatchers.IO) { dao.findItem(id) }
+
+    suspend fun findFolder(id: String): VaultFolder? = withContext(Dispatchers.IO) { dao.findFolder(id) }
+
+    /** Raw ciphertext bytes exactly as they sit on disk — what a Tier-A cloud sync uploads. */
+    suspend fun encryptedBlobBytes(item: VaultItem): ByteArray = withContext(Dispatchers.IO) {
+        blobFor(item).readBytes()
+    }
+
+    /**
+     * Writes bytes pulled from the cloud straight to the local blob path for [item], without
+     * re-encrypting them with this device's Keystore key. Used by [com.filewall.data.sync.
+     * SyncCoordinator] when it downloads a file another device pushed: the bytes it receives
+     * are already ciphertext under the *portable* sync key (see `SyncCrypto`), not this
+     * device's non-exportable Keystore key, so they are written through verbatim and decrypted
+     * with the sync key at read time — never with [crypto].
+     */
+    suspend fun writeIncomingBlob(item: VaultItem, bytes: ByteArray) = withContext(Dispatchers.IO) {
+        File(blobDir, item.blobName).writeBytes(bytes)
+    }
+
+    /** Upserts a row that originated remotely (see [SyncReconciler.Action.UPSERT_LOCAL]). */
+    suspend fun upsertRemoteItem(item: VaultItem) = withContext(Dispatchers.IO) { dao.upsertItem(item) }
+
+    suspend fun upsertRemoteFolder(folder: VaultFolder) =
+        withContext(Dispatchers.IO) { dao.upsertFolder(folder) }
+
+    /** Local-only trash, without bumping updatedAt or re-pushing — the remote is the origin. */
+    suspend fun trashLocalOnly(id: String, deletedAt: Long) = withContext(Dispatchers.IO) {
+        dao.trashItems(listOf(id), deletedAt)
+    }
 
     suspend fun upsertFolders(folders: List<VaultFolder>) = withContext(Dispatchers.IO) {
         dao.upsertFolders(folders)

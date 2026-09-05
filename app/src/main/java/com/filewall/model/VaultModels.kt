@@ -86,6 +86,8 @@ data class VaultItem(
     @ColumnInfo(defaultValue = "0") val deletedAt: Long = 0,
     /** True while the file sits in the Archive folder (still stored, hidden from the vault). */
     @ColumnInfo(defaultValue = "0") val archived: Boolean = false,
+    /** Epoch millis of the last local mutation. The referee for cloud sync's last-write-wins. */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 ) {
     val extension: String get() = name.substringAfterLast('.', "")
 
@@ -103,6 +105,8 @@ data class VaultFolder(
     val colorIndex: Int,
     val createdAt: Long,
     val hidden: Boolean,
+    /** Epoch millis of the last local mutation. The referee for cloud sync's last-write-wins. */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 /** Folder tint plus its item count, which is what the folder grid actually renders. */

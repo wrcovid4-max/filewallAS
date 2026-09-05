@@ -62,6 +62,31 @@ class FirebaseSyncManager(private val auth: FirebaseAuthManager) {
             onChange(snapshot.documents.mapNotNull { doc -> doc.data?.let { FolderDoc.fromMap(it) } })
         }
 
+    // ------------------------------------------------------------- one-shot fetch
+
+    /** Bounded fetch for a manual/background sync pass — §3.6's delta query, unbounded here. */
+    suspend fun fetchFiles(): List<FileDoc> =
+        files().get().await().documents.mapNotNull { doc -> doc.data?.let { FileDoc.fromMap(it) } }
+
+    suspend fun fetchFolders(): List<FolderDoc> =
+        folders().get().await().documents.mapNotNull { doc -> doc.data?.let { FolderDoc.fromMap(it) } }
+
+    // ---------------------------------------------------------------- settings
+
+    private fun settingsDoc() = db.collection(USERS).document(uid()).collection(META).document(SETTINGS)
+
+    suspend fun pushSettings(fields: Map<String, Any?>) {
+        settingsDoc().set(fields + mapOf("updatedAt" to now()), SetOptions.merge()).await()
+    }
+
+    suspend fun fetchSettings(): Map<String, Any?>? = settingsDoc().get().await().data
+
+    fun observeSettings(onChange: (Map<String, Any?>) -> Unit): ListenerRegistration =
+        settingsDoc().addSnapshotListener { snapshot, error ->
+            if (error != null || snapshot?.data == null) return@addSnapshotListener
+            onChange(snapshot.data!!)
+        }
+
     // ------------------------------------------------------------------ bytes
 
     suspend fun uploadBytes(fileId: String, bytes: ByteArray) {
@@ -77,6 +102,8 @@ class FirebaseSyncManager(private val auth: FirebaseAuthManager) {
         const val USERS = "users"
         const val FILES = "files"
         const val FOLDERS = "folders"
+        const val META = "meta"
+        const val SETTINGS = "settings"
         const val MAX_DOWNLOAD = 200L * 1024 * 1024   // 200 MiB per fetch
     }
 }
