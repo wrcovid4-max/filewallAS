@@ -29,6 +29,7 @@
     <string name="action_hide">Move to Hidden</string>
     <string name="action_unhide">Move to Unlocked</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_ok">Got it</string>
     <string name="action_save">Save</string>
     <string name="action_add_files">Add files</string>
     <string name="imported_from_share">Added %1$d file(s) to FileWall</string>
@@ -137,6 +138,13 @@
     <string name="firebase_sync_unconfigured">Cloud sync isn\'t set up for this build yet — see GOOGLE_SETUP.md.</string>
     <string name="sync_passphrase_label">Sync passphrase</string>
     <string name="sync_passphrase_hint">Same passphrase on every device — this is what lets them all decrypt the same files. It is not your vault PIN.</string>
+    <string name="sync_passphrase_help">What is a sync passphrase?</string>
+    <string name="sync_passphrase_step1">Make sure you\'re signed in with Google on this device first — that\'s the button above this one.</string>
+    <string name="sync_passphrase_step2">Pick a passphrase, at least 8 characters. Think of it as a shared password between all your devices — it is separate from your vault PIN and from the local .fwvault export passphrase.</string>
+    <string name="sync_passphrase_step3">Type it in and tap Set.</string>
+    <string name="sync_passphrase_step4">Repeat on every other device — Web, and later iOS/watchOS — typing the exact same passphrase each time.</string>
+    <string name="sync_passphrase_step5">Once two devices share that passphrase, their files start decrypting each other\'s uploads on the next sync. No further action needed.</string>
+    <string name="sync_passphrase_warning">Write it down somewhere safe (a password manager, not a sticky note). There is no \"forgot passphrase\" recovery — that\'s deliberate, it\'s what keeps Google from ever reading your files. Lose it, and a new device can\'t decrypt what\'s already synced.</string>
     <string name="set_sync_passphrase">Set passphrase</string>
     <string name="sync_passphrase_needed">Signed in — set a sync passphrase to start syncing files</string>
     <string name="sync_now">Sync now</string>

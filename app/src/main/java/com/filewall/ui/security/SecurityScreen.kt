@@ -47,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -96,6 +97,7 @@ fun SecurityScreen(
     val settings = state.settings
 
     var prompt by remember { mutableStateOf<PassphrasePrompt?>(null) }
+    var showPassphraseInfo by remember { mutableStateOf(false) }
     // Re-checked on every resume: the user can leave to Settings, enrol a fingerprint, and
     // come back expecting the toggle to be live now.
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -461,11 +463,25 @@ fun SecurityScreen(
                         Spacer(Modifier.height(14.dp))
 
                         if (!state.cloudHasPassphrase) {
-                            Text(
-                                stringResourceSafe(R.string.sync_passphrase_needed),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    stringResourceSafe(R.string.sync_passphrase_needed),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                IconButton(
+                                    onClick = { showPassphraseInfo = true },
+                                    modifier = Modifier.size(28.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Info,
+                                        contentDescription = stringResourceSafe(R.string.sync_passphrase_help),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
                             Spacer(Modifier.height(10.dp))
                             Button(
                                 onClick = { prompt = PassphrasePrompt.SetSyncPassphrase },
@@ -691,7 +707,50 @@ fun SecurityScreen(
             },
         )
     }
+
+    if (showPassphraseInfo) {
+        AlertDialog(
+            onDismissRequest = { showPassphraseInfo = false },
+            title = { Text(stringResourceSafe(R.string.sync_passphrase_label)) },
+            text = {
+                Column {
+                    SYNC_PASSPHRASE_STEPS.forEachIndexed { index, step ->
+                        Row(modifier = Modifier.padding(bottom = 10.dp)) {
+                            Text(
+                                "${index + 1}.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.width(22.dp),
+                            )
+                            Text(step, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Text(
+                        stringResourceSafe(R.string.sync_passphrase_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPassphraseInfo = false }) {
+                    Text(stringResourceSafe(R.string.action_ok))
+                }
+            },
+        )
+    }
 }
+
+/** The (i) walkthrough shown next to the sync-passphrase prompt in the Cloud Sync card. */
+private val SYNC_PASSPHRASE_STEPS: List<String>
+    @Composable get() = listOf(
+        stringResourceSafe(R.string.sync_passphrase_step1),
+        stringResourceSafe(R.string.sync_passphrase_step2),
+        stringResourceSafe(R.string.sync_passphrase_step3),
+        stringResourceSafe(R.string.sync_passphrase_step4),
+        stringResourceSafe(R.string.sync_passphrase_step5),
+    )
 
 /** FileWall's website pages, opened in the browser from the Security footer. */
 private object AppLinks {
