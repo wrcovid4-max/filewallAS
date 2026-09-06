@@ -154,6 +154,8 @@
     <string name="sync_status_synced">Synced %1$s</string>
     <string name="sync_status_error">%1$s</string>
     <string name="cloud_sync_signed_in_as">Signed in — device id %1$s</string>
+    <string name="google_sign_label">Google Sign</string>
+    <string name="drive_signed_in">Signed in</string>
     <string name="local_archive">Encrypted Archive</string>
     <string name="local_archive_desc">Export the whole vault as a single passphrase-protected .fwvault file, or restore one.</string>
     <string name="export_archive">Export archive</string>

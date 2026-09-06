@@ -20,6 +20,10 @@ import java.io.IOException
  */
 class FirebaseAuthManager(private val context: Context) {
 
+    /** Name/email/photo for whoever is signed in — same shape as DriveBackup.AccountInfo, so
+     * the Cloud Sync card can show a real account row the same way the Drive card always did. */
+    data class AccountInfo(val displayName: String, val email: String, val photoUrl: String?)
+
     private val webClientId = FirebaseGate.webClientId(context)
 
     private val client: GoogleSignInClient by lazy {
@@ -35,6 +39,16 @@ class FirebaseAuthManager(private val context: Context) {
 
     /** The current Firebase uid, or null when signed out. */
     val uid: String? get() = FirebaseAuth.getInstance().currentUser?.uid
+
+    /** Name/email/photo for the current session, or null when signed out. */
+    val account: AccountInfo?
+        get() = FirebaseAuth.getInstance().currentUser?.let { user ->
+            AccountInfo(
+                displayName = user.displayName ?: user.email.orEmpty().substringBefore('@'),
+                email = user.email.orEmpty(),
+                photoUrl = user.photoUrl?.toString(),
+            )
+        }
 
     /** Turns the sign-in Activity result into a Firebase session; returns the resolved uid. */
     suspend fun completeSignIn(data: Intent?): String {

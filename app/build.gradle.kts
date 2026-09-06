@@ -119,6 +119,7 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.okhttp)
     implementation(libs.material)
+    implementation(libs.coil.compose)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.datasource)

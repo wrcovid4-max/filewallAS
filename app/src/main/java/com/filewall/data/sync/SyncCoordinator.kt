@@ -60,6 +60,7 @@ class SyncCoordinator(
 
     val isAvailable: Boolean get() = FirebaseGate.isConfigured
     val isSignedIn: Boolean get() = isAvailable && auth.uid != null
+    val account: FirebaseAuthManager.AccountInfo? get() = if (isSignedIn) auth.account else null
     val hasSyncPassphrase: Boolean get() = passphraseStore.isStored
     val signInIntent: Intent get() = auth.signInIntent
 
