@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -451,7 +452,13 @@ fun SecurityScreen(
                         onClick = { cloudSignInLauncher.launch(viewModel.cloudSignInIntent) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.extraLarge,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color(0xFF3C4043),
+                        ),
                     ) {
+                        com.filewall.ui.common.GoogleLogo()
+                        Spacer(Modifier.width(10.dp))
                         Text(stringResourceSafe(R.string.sign_in_google))
                     }
 
@@ -590,7 +597,13 @@ fun SecurityScreen(
                         onClick = { signInLauncher.launch(viewModel.driveSignInIntent) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.extraLarge,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color(0xFF3C4043),
+                        ),
                     ) {
+                        com.filewall.ui.common.GoogleLogo()
+                        Spacer(Modifier.width(10.dp))
                         Text(stringResourceSafe(R.string.sign_in_google))
                     }
                 } else {
