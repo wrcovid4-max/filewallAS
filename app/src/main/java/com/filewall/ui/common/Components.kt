@@ -105,9 +105,9 @@ fun SectionCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(Modifier.padding(16.dp), content = content)
+        Column(Modifier.padding(18.dp), content = content)
     }
 }
 
@@ -274,8 +274,8 @@ fun SettingSwitchRow(
 @Composable
 fun SettingDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
-        modifier = modifier.padding(vertical = 16.dp),
-        color = MaterialTheme.colorScheme.outline,
+        modifier = modifier.padding(vertical = 12.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
     )
 }
 
