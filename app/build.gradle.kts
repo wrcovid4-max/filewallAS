@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.material)
     implementation(libs.coil.compose)
+    implementation("androidx.webkit:webkit:1.12.1")
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.datasource)

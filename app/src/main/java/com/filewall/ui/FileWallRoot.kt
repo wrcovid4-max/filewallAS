@@ -282,7 +282,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 )
             },
             pdfViewer = { pdfModifier ->
-                VaultPdfViewer(
+                com.filewall.ui.viewer.PdfJsViewer(
                     item = item,
                     decryptToCache = { container.repository.materialisePreview(it) },
                     modifier = pdfModifier,
