@@ -1,5 +1,6 @@
 package com.filewall.ui.common
 
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -86,7 +87,7 @@ fun VaultHeader(
         if (onStorageClick != null) {
             androidx.compose.material3.IconButton(onClick = onStorageClick) {
                 androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Filled.Storage,
+                    imageVector = Icons.Filled.Storage,
                     contentDescription = "Storage",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
