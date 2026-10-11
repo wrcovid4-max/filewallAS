@@ -271,7 +271,9 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             loadImage = { target ->
                 runCatching {
                     val bytes = container.repository.fullBytes(target)
-                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    }
                 }.getOrNull()
             },
             videoPlayer = { playerModifier ->
