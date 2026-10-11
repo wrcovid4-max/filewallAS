@@ -1,5 +1,8 @@
 package com.filewall.data.media
 
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.Semaphore
+import java.util.concurrent.ConcurrentHashMap
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
@@ -23,7 +26,10 @@ class ThumbnailStore(private val repository: VaultRepository) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
     }
 
-    private val loadLock = Mutex()
+    // Up to three decodes run at once, so fast scrolling fills tiles in quickly.
+    private val permits = Semaphore(3)
+    // One lock per item: the same thumbnail is never decoded twice at the same time.
+    private val itemLocks = ConcurrentHashMap<String, Mutex>()
 
     /** Cached bitmap if present, otherwise null — safe to call during composition. */
     fun peek(itemId: String): Bitmap? = cache.get(itemId)
@@ -32,14 +38,14 @@ class ThumbnailStore(private val repository: VaultRepository) {
     suspend fun load(item: VaultItem): Bitmap? {
         cache.get(item.id)?.let { return it }
 
+        val gate = itemLocks.getOrPut(item.id) { Mutex() }
         return withContext(Dispatchers.IO) {
-            // One decode at a time per item: a fast scroll can otherwise ask for the same
-            // thumbnail from several composables before the first one finishes.
-            loadLock.withLock {
+            gate.withLock {
                 cache.get(item.id)?.let { return@withLock it }
-                val bytes = repository.thumbnailBytes(item) ?: return@withLock null
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                bitmap?.also { cache.put(item.id, it) }
+                permits.withPermit {
+                    val bytes = repository.thumbnailBytes(item) ?: return@withPermit null
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.also { cache.put(item.id, it) }
+                }
             }
         }
     }
