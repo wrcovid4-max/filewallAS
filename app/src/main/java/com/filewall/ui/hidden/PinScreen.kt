@@ -146,7 +146,7 @@ fun PinScreen(
                 onDigit = { digit ->
                     if (!lockedOut && entry.length < PinManager.PIN_LENGTH) entry += digit
                 },
-                onBackspace = { if (!lockedOut) entry = entry.dropLast(1) },
+                onBackspace = { entry = entry.dropLast(1) },
                 onConfirm = {
                     if (!lockedOut && entry.length == PinManager.PIN_LENGTH) onEntryComplete(entry)
                 },
@@ -225,7 +225,7 @@ private fun PinPad(
             PinKey(
                 height = keyHeight,
                 modifier = Modifier.weight(1f),
-                enabled = enabled,
+                enabled = true,
                 onClick = onBackspace,
             ) {
                 Icon(
