@@ -309,9 +309,9 @@ fun FolderCard(
         modifier = modifier.size(width = FolderCardWidth, height = FolderCardHeight),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = if (hasCover) MaterialTheme.colorScheme.surfaceContainerHighest else FolderPalette.container(index),
+            containerColor = if (hasCover) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer,
         ),
-        border = BorderStroke(1.5.dp, FolderPalette.outline(index)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         onClick = onOpen,
     ) {
         Box(Modifier.fillMaxSize()) {
@@ -395,12 +395,20 @@ fun FolderCard(
                         .padding(horizontal = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(
-                        Icons.Filled.Folder,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(30.dp),
-                    )
+                    Box(
+                        Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(FolderPalette.container(index)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Filled.Folder,
+                            contentDescription = null,
+                            tint = FolderPalette.base(index),
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = entry.folder.name,
@@ -414,8 +422,8 @@ fun FolderCard(
 
             if (entry.itemCount > 0) {
                 // A count pill reads clearly over both a cover photo and the tinted tile.
-                val pillBg = if (hasCover) Color.Black.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary
-                val pillFg = if (hasCover) Color.White else MaterialTheme.colorScheme.onPrimary
+                val pillBg = if (hasCover) Color.Black.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceContainerHighest
+                val pillFg = if (hasCover) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                 // Top-left: the overflow menu owns the top-right, the name owns the bottom,
                 // so this corner never collides with either.
                 Row(
@@ -573,7 +581,7 @@ fun FileGridTile(
         Spacer(Modifier.height(8.dp))
         Text(
             text = item.name,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
