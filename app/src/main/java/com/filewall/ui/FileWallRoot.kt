@@ -46,6 +46,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.filewall.R
+import com.filewall.ui.storage.StorageSheet
 import com.filewall.di.AppContainer
 import com.filewall.model.VaultFilter
 import com.filewall.model.VaultItem
@@ -92,6 +93,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
     var tab by remember { mutableStateOf(Tab.VAULT) }
     var viewerItem by remember { mutableStateOf<VaultItem?>(null) }
     var viewerOpen by remember { mutableStateOf(false) }
+    var showStorage by remember { mutableStateOf(false) }
     val viewerProgress by animateFloatAsState(
         targetValue = if (viewerOpen) 1f else 0f,
         animationSpec = tween(durationMillis = 280),
@@ -193,7 +195,10 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            VaultHeader(totalBytes = storage.totalBytes)
+            VaultHeader(
+                totalBytes = storage.totalBytes,
+                onStorageClick = { showStorage = true },
+            )
 
             AnimatedContent(
                 targetState = tab,
@@ -245,6 +250,10 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             }
             }
         }
+    }
+
+    if (showStorage) {
+        StorageSheet(breakdown = storage, onDismiss = { showStorage = false })
     }
 
     // ------------------------------------------------------------------ viewer

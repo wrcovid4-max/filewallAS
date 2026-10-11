@@ -51,7 +51,11 @@ import com.filewall.util.formatBytes
 
 /** The persistent "FileWall / 269.4 MB USED" masthead every tab sits under. */
 @Composable
-fun VaultHeader(totalBytes: Long, modifier: Modifier = Modifier) {
+fun VaultHeader(
+    totalBytes: Long,
+    modifier: Modifier = Modifier,
+    onStorageClick: (() -> Unit)? = null,
+) {
     // A quiet app bar: icon, name and storage summary. No heavy masthead.
     Row(
         modifier = modifier
@@ -78,6 +82,15 @@ fun VaultHeader(totalBytes: Long, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        if (onStorageClick != null) {
+            androidx.compose.material3.IconButton(onClick = onStorageClick) {
+                androidx.compose.material3.Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Filled.Storage,
+                    contentDescription = "Storage",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
