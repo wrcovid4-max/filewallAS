@@ -1,5 +1,9 @@
 package com.filewall.ui.hidden
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -102,6 +106,7 @@ fun HiddenGate(
         return
     }
 
+    val scope = rememberCoroutineScope()
     PinScreen(
         stage = stage,
         errorMessage = error,
@@ -118,8 +123,11 @@ fun HiddenGate(
 
                 PinStage.CONFIRM -> {
                     if (entered == firstEntry) {
-                        pinManager.setPin(entered)
-                        onUnlocked()
+                        // Key derivation is deliberately slow; keep it off the UI thread.
+                        scope.launch {
+                            withContext(Dispatchers.Default) { pinManager.setPin(entered) }
+                            onUnlocked()
+                        }
                     } else {
                         firstEntry = null
                         error = mismatchText
@@ -127,17 +135,21 @@ fun HiddenGate(
                     }
                 }
 
-                PinStage.VERIFY -> when (val result = pinManager.verify(entered)) {
-                    is PinManager.Result.Success -> {
-                        error = null
-                        onUnlocked()
+                PinStage.VERIFY -> scope.launch {
+                    // Key derivation is deliberately slow; keep it off the UI thread.
+                    val result = withContext(Dispatchers.Default) { pinManager.verify(entered) }
+                    when (result) {
+                        is PinManager.Result.Success -> {
+                            error = null
+                            onUnlocked()
+                        }
+
+                        is PinManager.Result.Wrong -> error = wrongText
+
+                        is PinManager.Result.LockedOut -> lockoutRemaining = result.remainingMs
+
+                        is PinManager.Result.NotSet -> stage = PinStage.SET
                     }
-
-                    is PinManager.Result.Wrong -> error = wrongText
-
-                    is PinManager.Result.LockedOut -> lockoutRemaining = result.remainingMs
-
-                    is PinManager.Result.NotSet -> stage = PinStage.SET
                 }
             }
         },
