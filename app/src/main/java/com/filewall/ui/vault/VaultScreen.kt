@@ -515,7 +515,7 @@ fun VaultScreen(
             SearchOverlay(
                 query = state.query,
                 onQueryChange = viewModel::setQuery,
-                results = state.items,
+                results = state.searchResults,
                 thumbnails = viewModel.thumbnails,
                 previewDocs = state.showDocPreviews,
                 onOpenItem = { item ->
