@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -96,6 +97,11 @@ fun ViewerScreen(
     var offsetX by remember(item.id) { mutableFloatStateOf(0f) }
     var offsetY by remember(item.id) { mutableFloatStateOf(0f) }
     val animatedScale by animateFloatAsState(targetValue = scale, label = "zoom")
+    val imageAlpha by animateFloatAsState(
+        targetValue = if (image != null) 1f else 0f,
+        animationSpec = tween(durationMillis = 350),
+        label = "imageFade",
+    )
 
     // Anything with an in-app preview can be pinched: photos, PDFs and video. External docs
     // (NoPreview) have nothing to zoom.
@@ -218,6 +224,7 @@ fun ViewerScreen(
                             .graphicsLayer(
                                 scaleX = animatedScale,
                                 scaleY = animatedScale,
+                                alpha = imageAlpha,
                                 translationX = offsetX,
                                 translationY = offsetY,
                             ),

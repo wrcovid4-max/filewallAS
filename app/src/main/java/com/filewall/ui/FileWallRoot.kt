@@ -1,5 +1,14 @@
 package com.filewall.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedContent
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -82,6 +91,12 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
 
     var tab by remember { mutableStateOf(Tab.VAULT) }
     var viewerItem by remember { mutableStateOf<VaultItem?>(null) }
+    var viewerOpen by remember { mutableStateOf(false) }
+    val viewerProgress by animateFloatAsState(
+        targetValue = if (viewerOpen) 1f else 0f,
+        animationSpec = tween(durationMillis = 280),
+        label = "viewerProgress",
+    )
     var viewerDialog by remember { mutableStateOf<ViewerDialog?>(null) }
     var changingPasscode by remember { mutableStateOf(false) }
 
@@ -131,6 +146,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 if (item != null && !item.hidden) {
                     tab = Tab.VAULT
                     viewerItem = item
+                    viewerOpen = true
                 }
             }
         }
@@ -179,7 +195,25 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
         ) {
             VaultHeader(totalBytes = storage.totalBytes)
 
-            when (tab) {
+            AnimatedContent(
+                targetState = tab,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                transitionSpec = {
+                    val forward = targetState.ordinal > initialState.ordinal
+                    (slideInHorizontally(
+                        animationSpec = tween(durationMillis = 320),
+                        initialOffsetX = { full -> if (forward) full / 6 else -full / 6 },
+                    ) + fadeIn(animationSpec = tween(durationMillis = 260))) togetherWith
+                        (slideOutHorizontally(
+                            animationSpec = tween(durationMillis = 320),
+                            targetOffsetX = { full -> if (forward) -full / 6 else full / 6 },
+                        ) + fadeOut(animationSpec = tween(durationMillis = 200)))
+                },
+                label = "tabs",
+            ) { current ->
+            when (current) {
                 Tab.VAULT, Tab.HIDDEN -> VaultScreen(
                     viewModel = vaultViewModel,
                     pinManager = container.pinManager,
@@ -187,6 +221,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     onUnlockHidden = { container.lock.unlock() },
                     onOpenItem = { item ->
                         viewerItem = item
+                        viewerOpen = true
                         // Photos, video and PDFs render in-app. Anything else needs a viewer
                         // we do not ship, so hand it over immediately rather than showing an
                         // empty stage first.
@@ -208,16 +243,22 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     },
                 )
             }
+            }
         }
     }
 
     // ------------------------------------------------------------------ viewer
 
-    viewerItem?.let { item ->
-        BackHandler { viewerItem = null }
+    viewerItem?.takeIf { viewerOpen || viewerProgress > 0f }?.let { item ->
+        BackHandler { viewerOpen = false }
 
         ViewerScreen(
             item = item,
+            modifier = Modifier.graphicsLayer {
+                alpha = viewerProgress
+                scaleX = 0.94f + 0.06f * viewerProgress
+                scaleY = 0.94f + 0.06f * viewerProgress
+            },
             loadImage = { target ->
                 runCatching {
                     val bytes = container.repository.fullBytes(target)
@@ -238,7 +279,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     modifier = pdfModifier,
                 )
             },
-            onClose = { viewerItem = null },
+            onClose = { viewerOpen = false },
             onExport = { exportLauncher.launch(item.name) },
             onMove = { viewerDialog = ViewerDialog.Move },
             onRename = { viewerDialog = ViewerDialog.Rename },
@@ -279,7 +320,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 onConfirm = {
                     vaultViewModel.delete(listOf(item))
                     viewerDialog = null
-                    viewerItem = null
+                    viewerOpen = false
                 },
             )
         }
