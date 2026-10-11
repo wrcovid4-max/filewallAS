@@ -201,25 +201,12 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 onStorageClick = { showStorage = true },
             )
 
-            AnimatedContent(
-                // Vault and Hidden share one screen, so they are one target: the switch only changes the list.
-                targetState = if (tab == Tab.SECURITY) Tab.SECURITY else Tab.VAULT,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                transitionSpec = {
-                    val forward = targetState.ordinal > initialState.ordinal
-                    (slideInHorizontally(
-                        animationSpec = tween(durationMillis = 320),
-                        initialOffsetX = { full -> if (forward) full / 6 else -full / 6 },
-                    ) + fadeIn(animationSpec = tween(durationMillis = 260))) togetherWith
-                        (slideOutHorizontally(
-                            animationSpec = tween(durationMillis = 320),
-                            targetOffsetX = { full -> if (forward) -full / 6 else full / 6 },
-                        ) + fadeOut(animationSpec = tween(durationMillis = 200)))
-                },
-                label = "tabs",
-            ) { current ->
+            ) {
+                val current = if (tab == Tab.SECURITY) Tab.SECURITY else Tab.VAULT
             when (current) {
                 Tab.VAULT, Tab.HIDDEN -> VaultScreen(
                     viewModel = vaultViewModel,
