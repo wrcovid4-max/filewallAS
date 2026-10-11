@@ -201,7 +201,8 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             )
 
             AnimatedContent(
-                targetState = tab,
+                // Vault and Hidden share one screen, so they are one target: the switch only changes the list.
+                targetState = if (tab == Tab.SECURITY) Tab.SECURITY else Tab.VAULT,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
