@@ -300,7 +300,7 @@ fun VaultScreen(
                     }
 
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (state.gridView) LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             item {
                                 NewFolderCard(onClick = { dialog = VaultDialog.NewFolder })
                             }
@@ -343,6 +343,41 @@ fun VaultScreen(
                             }
                             item {
                                 SpecialFolderCard(
+                                    title = stringResourceSafe(R.string.archive),
+                                    count = state.archiveCount,
+                                    icon = Icons.Filled.Archive,
+                                    onClick = { viewModel.openSpecial(SpecialView.ARCHIVE) },
+                                )
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                NewFolderRow(onClick = { dialog = VaultDialog.NewFolder })
+                                state.folders.forEach { entry ->
+                                    FolderListRow(
+                                        entry = entry,
+                                        onOpen = { viewModel.openFolder(entry.folder.id) },
+                                        onRename = {
+                                            dialog = VaultDialog.RenameFolder(entry.folder.id, entry.folder.name)
+                                        },
+                                        onRecolor = {
+                                            dialog = VaultDialog.ColourFolder(entry.folder.id, entry.folder.colorIndex)
+                                        },
+                                        onDelete = {
+                                            dialog = VaultDialog.DeleteFolder(
+                                                entry.folder.id,
+                                                entry.folder.name,
+                                                entry.itemCount,
+                                            )
+                                        },
+                                    )
+                                }
+                                SystemFolderRow(
+                                    title = stringResourceSafe(R.string.recently_deleted),
+                                    count = state.trashCount,
+                                    icon = Icons.Filled.Delete,
+                                    onClick = { viewModel.openSpecial(SpecialView.TRASH) },
+                                )
+                                SystemFolderRow(
                                     title = stringResourceSafe(R.string.archive),
                                     count = state.archiveCount,
                                     icon = Icons.Filled.Archive,
