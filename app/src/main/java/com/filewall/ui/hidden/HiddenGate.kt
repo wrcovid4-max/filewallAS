@@ -104,7 +104,8 @@ fun HiddenGate(
 
     PinScreen(
         stage = stage,
-        errorMessage = if (lockoutRemaining > 0) lockedOutText else error,
+        errorMessage = error,
+        lockedOutMessage = if (lockoutRemaining > 0) lockedOutText else null,
         biometricAvailable = biometricAvailable,
         onBiometricRequested = { launchBiometricPrompt() },
         onEntryComplete = { entered ->
