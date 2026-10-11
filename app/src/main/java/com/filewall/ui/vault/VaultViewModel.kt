@@ -1,5 +1,8 @@
 package com.filewall.ui.vault
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.flowOf
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -170,24 +173,26 @@ class VaultViewModel(
             archiveCount = ex.archiveCount,
             showDocPreviews = prefs.showDocPreviews,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), VaultUiState())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), VaultUiState())
 
     // Search runs over the whole vault, not the folder on screen, so a file is always findable.
-    private val searchFlow = combine(
-        query,
-        repository.observeItems(false),
-        repository.observeItems(true),
-        lock.hiddenUnlocked,
-    ) { q, normal, hidden, unlocked ->
-        val pool = if (unlocked) normal + hidden else normal
+    private val searchFlow = query.flatMapLatest { q ->
         val term = q.trim()
         if (term.isBlank()) {
-            emptyList()
+            // Not searching: do not keep the whole vault loaded.
+            flowOf(emptyList())
         } else {
-            val ext = term.trimStart('.')
-            pool
-                .filter { it.name.contains(term, ignoreCase = true) || it.extension.contains(ext, ignoreCase = true) }
-                .sortedByDescending { it.addedAt }
+            combine(
+                repository.observeItems(false),
+                repository.observeItems(true),
+                lock.hiddenUnlocked,
+            ) { normal, hidden, unlocked ->
+                val pool = if (unlocked) normal + hidden else normal
+                val ext = term.trimStart('.')
+                pool
+                    .filter { it.name.contains(term, ignoreCase = true) || it.extension.contains(ext, ignoreCase = true) }
+                    .sortedByDescending { it.addedAt }
+            }
         }
     }
 
