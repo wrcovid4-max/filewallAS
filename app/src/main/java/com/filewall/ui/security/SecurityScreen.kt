@@ -923,7 +923,7 @@ private fun SecurityHero(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            painter = painterResource(R.drawable.ic_launcher_art),
+            painter = painterResource(R.drawable.ic_launcher_art_small),
             contentDescription = null,
             modifier = Modifier
                 .size(72.dp)

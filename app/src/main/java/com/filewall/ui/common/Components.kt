@@ -64,7 +64,7 @@ fun VaultHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
-            painter = painterResource(R.drawable.ic_launcher_art),
+            painter = painterResource(R.drawable.ic_launcher_art_small),
             contentDescription = null,
             modifier = Modifier
                 .size(36.dp)
