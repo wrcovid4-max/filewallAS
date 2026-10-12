@@ -1,5 +1,6 @@
 package com.filewall.ui
 
+import com.filewall.ui.ai.AskAiFab
 import com.filewall.ui.ai.AiChatSheet
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.graphics.graphicsLayer
@@ -184,6 +185,11 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 }
             },
         containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButton = {
+            if (tab != Tab.SECURITY) {
+                AskAiFab(onClick = { showAi = true })
+            }
+        },
         snackbarHost = { SnackbarHost(snackbarHost) },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
@@ -201,7 +207,6 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             VaultHeader(
                 totalBytes = storage.totalBytes,
                 onStorageClick = { showStorage = true },
-                onAiClick = { showAi = true },
             )
 
             Box(
