@@ -1,5 +1,6 @@
 package com.filewall.ui.ai
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.WindowInsets
