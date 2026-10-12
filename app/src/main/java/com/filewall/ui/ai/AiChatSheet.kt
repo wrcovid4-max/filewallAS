@@ -1,5 +1,8 @@
 package com.filewall.ui.ai
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.systemBars
@@ -212,6 +215,7 @@ fun AiChatSheet(
                 .windowInsetsPadding(WindowInsets.systemBars)
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
+            DismissGrab(onDismiss = onDismiss)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -522,5 +526,32 @@ private fun ConsentCard(rememberChoice: Boolean, onAllow: () -> Unit, onNotNow: 
             Spacer(Modifier.size(8.dp))
             Button(onClick = onAllow) { Text("Allow") }
         }
+    }
+}
+
+/** A grab bar at the top centre. Drag it down to close the Ask AI screen. */
+@Composable
+private fun DismissGrab(onDismiss: () -> Unit) {
+    val threshold = with(LocalDensity.current) { 80.dp.toPx() }
+    var drag by remember { mutableStateOf(0f) }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { drag = 0f },
+                    onVerticalDrag = { _, amount -> drag += amount },
+                    onDragEnd = { if (drag > threshold) onDismiss() },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size(width = 44.dp, height = 4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
+        )
     }
 }

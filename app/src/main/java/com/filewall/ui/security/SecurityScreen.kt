@@ -1,5 +1,7 @@
 package com.filewall.ui.security
 
+import com.filewall.ui.common.DriveLogo
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Switch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -202,32 +204,27 @@ fun SecurityScreen(
         }
         item {
             val chosen = com.filewall.data.drive.DriveFolder.get(driveContext) != null
-            Column(
-                Modifier
+            val folderName = com.filewall.data.drive.DriveFolder.displayName(driveContext)
+            FilledTonalButton(
+                onClick = { driveFolderLauncher.launch(null) },
+                modifier = Modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-                    .padding(18.dp),
+                    .height(72.dp),
+                shape = MaterialTheme.shapes.large,
             ) {
-                Text(
-                    text = "Google Drive folder",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = if (chosen) {
-                        "Saving to \"${com.filewall.data.drive.DriveFolder.displayName(driveContext) ?: "your chosen folder"}\". " +
-                            "Files appear there after you export them. Plain copies, so they open anywhere. Hidden files still ask first."
-                    } else {
-                        "Choose a folder in Google Drive once. Exports go there without asking each time. No Google setup needed."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
-                OutlinedButton(onClick = { driveFolderLauncher.launch(null) }) {
-                    Text(if (chosen) "Change folder" else "Choose folder")
+                DriveLogo(iconSize = 26.dp)
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = if (chosen) "Saving to ${folderName ?: "your Drive folder"}" else "Choose a Google Drive folder",
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = if (chosen) "Tap to change folder" else "Exports go there without asking each time",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                    )
                 }
             }
         }
