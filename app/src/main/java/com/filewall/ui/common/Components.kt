@@ -1,5 +1,6 @@
 package com.filewall.ui.common
 
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -56,6 +57,7 @@ fun VaultHeader(
     totalBytes: Long,
     modifier: Modifier = Modifier,
     onStorageClick: (() -> Unit)? = null,
+    onAiClick: (() -> Unit)? = null,
 ) {
     // A quiet app bar: icon, name and storage summary. No heavy masthead.
     Row(
@@ -83,6 +85,15 @@ fun VaultHeader(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        if (onAiClick != null) {
+            androidx.compose.material3.IconButton(onClick = onAiClick) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = "Ask AI",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (onStorageClick != null) {
             androidx.compose.material3.IconButton(onClick = onStorageClick) {

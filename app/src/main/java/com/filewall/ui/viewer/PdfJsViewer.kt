@@ -1,5 +1,7 @@
 package com.filewall.ui.viewer
 
+import com.filewall.ui.ai.AiChatSheet
+import androidx.compose.material.icons.filled.AutoAwesome
 import android.content.Context
 import android.content.Intent
 import android.speech.tts.TextToSpeech
@@ -178,6 +180,7 @@ fun PdfJsViewer(
     var layout by rememberSaveable(item.id) { mutableStateOf(PdfLayout.CONTINUOUS) }
     var tool by rememberSaveable(item.id) { mutableStateOf(PdfTool.NONE) }
     var showMore by remember(item.id) { mutableStateOf(false) }
+    var showAi by remember(item.id) { mutableStateOf(false) }
     var searchOpen by remember(item.id) { mutableStateOf(false) }
     var searchText by remember(item.id) { mutableStateOf("") }
     var lastQuery by remember(item.id) { mutableStateOf("") }
@@ -234,6 +237,15 @@ fun PdfJsViewer(
             .background(BarColor)
             .windowInsetsPadding(WindowInsets.systemBars),
     ) {
+        if (showAi) {
+            AiChatSheet(
+                title = "Ask AI",
+                subtitle = item.name,
+                consentKey = if (item.hidden) null else "doc-${item.id}",
+                loadContext = { viewHolder[0]?.readPageTexts()?.joinToString("\n\n").orEmpty() },
+                onDismiss = { showAi = false },
+            )
+        }
         Column(Modifier.fillMaxSize()) {
             // Top bar.
             Row(
@@ -266,6 +278,9 @@ fun PdfJsViewer(
                     "Read aloud",
                     tint = if (readAloud) ToolActiveColor else IconColor,
                 ) { readAloud = !readAloud }
+                BarIcon(Icons.Filled.AutoAwesome, "Ask AI", tint = if (showAi) ToolActiveColor else IconColor) {
+                    showAi = true
+                }
                 BarIcon(Icons.Filled.Save, "Save marked copy") {
                     if (!saving && ready) {
                         saving = true

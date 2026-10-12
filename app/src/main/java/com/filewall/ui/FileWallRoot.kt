@@ -1,5 +1,6 @@
 package com.filewall.ui
 
+import com.filewall.ui.ai.AiChatSheet
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
@@ -95,6 +96,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
     var viewerItem by remember { mutableStateOf<VaultItem?>(null) }
     var viewerOpen by remember { mutableStateOf(false) }
     var showStorage by remember { mutableStateOf(false) }
+    var showAi by remember { mutableStateOf(false) }
     val viewerProgress by animateFloatAsState(
         targetValue = if (viewerOpen) 1f else 0f,
         animationSpec = tween(durationMillis = 280),
@@ -199,6 +201,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             VaultHeader(
                 totalBytes = storage.totalBytes,
                 onStorageClick = { showStorage = true },
+                onAiClick = { showAi = true },
             )
 
             Box(
@@ -243,6 +246,15 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
 
     if (showStorage) {
         StorageSheet(breakdown = storage, onDismiss = { showStorage = false })
+    }
+    if (showAi) {
+        AiChatSheet(
+            title = "Ask AI",
+            subtitle = "Your vault",
+            consentKey = "vault-summary",
+            loadContext = { summarizeVault(container) },
+            onDismiss = { showAi = false },
+        )
     }
 
     // ------------------------------------------------------------------ viewer
@@ -437,3 +449,10 @@ private suspend fun saveMarkedCopy(
         tmp.delete()
     }
 }
+
+/** Names, categories and sizes of visible files only. Hidden files are never sent. */
+private suspend fun summarizeVault(container: AppContainer): String =
+    container.repository.allItems()
+        .filter { it.deletedAt == 0L && !it.hidden }
+        .take(300)
+        .joinToString("\n") { "${it.name} | ${it.category.name} | ${it.sizeBytes} bytes" }

@@ -10,6 +10,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
+        val localProps = java.util.Properties().apply {
+            val file = rootProject.file("local.properties")
+            if (file.exists()) file.inputStream().use { load(it) }
+        }
+        buildConfigField("String", "GEMINI_API_KEY", "\"${localProps.getProperty("GEMINI_API_KEY", "")}\"")
         applicationId = "com.filewall"
         // API 26 keeps AndroidKeyStore AES/CTR + HMAC and adaptive icons available.
         // The primary test device (Android 11) is API 30.
