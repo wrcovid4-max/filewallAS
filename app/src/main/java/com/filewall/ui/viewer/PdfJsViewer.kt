@@ -7,8 +7,11 @@ import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
@@ -31,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
@@ -52,13 +56,20 @@ private const val HIDE_EXPORT_CSS =
         "s.textContent='#openFile,#print,#download,#secondaryOpenFile,#secondaryPrint,#secondaryDownload{display:none!important}';" +
         "document.head.appendChild(s);})();"
 
+// Re-fit the pages to the real size of the viewer. Without this, a viewer opened before it has
+// been measured can lay its pages out at zero width and show a blank page.
+private const val REFIT_JS =
+    "(function(){var a=window.PDFViewerApplication;" +
+        "if(a&&a.pdfViewer){a.pdfViewer.currentScaleValue='auto';}" +
+        "window.dispatchEvent(new Event('resize'));})();"
+
 /**
  * In-app PDF viewer built on PDF.js, the engine behind Firefox's PDF reader.
  *
- * Unlike a plain page renderer, this keeps the document live: forms can be filled, links
- * work, and annotations show. The viewer and its engine ship inside the app, so nothing is
- * loaded from the internet. The PDF is decrypted into the preview cache, served to the
- * viewer from memory-backed requests only, and wiped on lock, on background and at launch.
+ * Forms can be filled, links work, and annotations show. The viewer and its engine ship
+ * inside the app, so nothing is loaded from the internet. The PDF is decrypted into the
+ * preview cache, served to the viewer from memory-backed requests only, and wiped on lock,
+ * on background and at launch.
  */
 @Composable
 fun PdfJsViewer(
@@ -66,7 +77,7 @@ fun PdfJsViewer(
     decryptToCache: suspend (VaultItem) -> File,
     modifier: Modifier = Modifier,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val docHandler = remember(item.id) { PdfDocHandler() }
     val loader = remember(item.id) {
         WebViewAssetLoader.Builder()
@@ -86,7 +97,14 @@ fun PdfJsViewer(
         ready = file != null
     }
 
-    Box(modifier.fillMaxSize().background(Color(0xFF202020))) {
+    // Keep clear of the status bar and the navigation bar, so the viewer's toolbar and the
+    // layout switcher are never drawn underneath them.
+    Box(
+        modifier
+            .fillMaxSize()
+            .background(Color(0xFF202020))
+            .windowInsetsPadding(WindowInsets.systemBars),
+    ) {
         when {
             failed -> Text(
                 text = stringResourceSafe(R.string.pdf_failed),
@@ -116,6 +134,14 @@ fun PdfJsViewer(
                             override fun onPageFinished(view: WebView, url: String?) {
                                 view.evaluateJavascript(HIDE_EXPORT_CSS, null)
                                 (view.tag as? PdfLayout)?.let { view.evaluateJavascript(layoutScript(it), null) }
+                                // The viewer may finish starting before it has its final size.
+                                view.postDelayed({ view.evaluateJavascript(REFIT_JS, null) }, 400)
+                            }
+                        }
+                        // Re-fit whenever the viewer's size actually changes.
+                        addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                                (v as WebView).evaluateJavascript(REFIT_JS, null)
                             }
                         }
                         viewHolder[0] = this
@@ -128,12 +154,13 @@ fun PdfJsViewer(
             )
         }
 
-        // Layout switcher: single page, two pages, continuous. Maps to PDF.js's own view modes.
+        // Layout switcher: single page, two pages, continuous. Centred at the bottom, clear of
+        // the viewer's own corner buttons.
         if (ready && !failed) {
             Row(
                 Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(12.dp)
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp)
                     .clip(RoundedCornerShape(50))
                     .background(Color(0xCC000000))
                     .padding(horizontal = 4.dp, vertical = 2.dp),
