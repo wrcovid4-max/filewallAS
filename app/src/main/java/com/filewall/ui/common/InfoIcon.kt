@@ -19,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.filewall.R
 
 /** A small (i) button that explains a control in plain words. Same idea as Cash Memer's. */
 @Composable
@@ -40,7 +39,7 @@ fun InfoIcon(title: String, body: String, modifier: Modifier = Modifier) {
             text = { Text(body, style = MaterialTheme.typography.bodyLarge) },
             confirmButton = {
                 TextButton(onClick = { open = false }) {
-                    Text(stringResourceSafe(R.string.action_close))
+                    Text("Close")
                 }
             },
         )
