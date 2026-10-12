@@ -193,6 +193,8 @@ fun PdfJsViewer(
     var barsVisible by rememberSaveable(item.id) { mutableStateOf(false) }
     val showBars = !fullScreen || barsVisible
     val tapRef = remember(item.id) { arrayOf<() -> Unit>({}) }
+    // Ignores a second back press within 0.7 s, so a quick double tap does only one action.
+    val lastBack = remember(item.id) { longArrayOf(0L) }
     tapRef[0] = { barsVisible = !barsVisible }
     var searchOpen by remember(item.id) { mutableStateOf(false) }
     var searchText by remember(item.id) { mutableStateOf("") }
@@ -268,7 +270,13 @@ fun PdfJsViewer(
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BarIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = { if (fullScreen) onFullScreenChange(false) else onClose() })
+                BarIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back") {
+                    val now = System.currentTimeMillis()
+                    if (now - lastBack[0] > 700L) {
+                        lastBack[0] = now
+                        if (fullScreen) onFullScreenChange(false) else onClose()
+                    }
+                }
                 Spacer(Modifier.weight(1f))
                 BarIcon(
                     Icons.Filled.Highlight,
