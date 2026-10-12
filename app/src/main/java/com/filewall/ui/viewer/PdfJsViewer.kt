@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import com.filewall.ui.ai.AskAiFab
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.CountDownLatch
 import androidx.compose.ui.platform.LocalDensity
@@ -285,9 +286,6 @@ fun PdfJsViewer(
                     "Read aloud",
                     tint = if (readAloud) ToolActiveColor else IconColor,
                 ) { readAloud = !readAloud }
-                BarIcon(Icons.Filled.AutoAwesome, "Ask AI", tint = if (showAi) ToolActiveColor else IconColor) {
-                    showAi = true
-                }
                 BarIcon(Icons.Filled.Save, "Save marked copy") {
                     if (!saving && ready) {
                         saving = true
@@ -440,6 +438,16 @@ fun PdfJsViewer(
                             view.tag = layout
                             if (view.url == null) view.loadUrl(VIEWER_URL)
                         },
+                    )
+                }
+
+                // Ask AI sphere, bottom-left of the page, clear of the Draw button.
+                if (ready && !failed) {
+                    AskAiFab(
+                        onClick = { showAi = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 16.dp, bottom = 12.dp),
                     )
                 }
 

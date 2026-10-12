@@ -187,7 +187,10 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             if (tab != Tab.SECURITY) {
-                AskAiFab(onClick = { showAi = true })
+                AskAiFab(
+                    onClick = { showAi = true },
+                    modifier = Modifier.padding(bottom = 92.dp),
+                )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHost) },
