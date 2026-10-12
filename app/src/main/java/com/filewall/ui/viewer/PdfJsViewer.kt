@@ -441,4 +441,3 @@ private class PdfDocHandler : WebViewAssetLoader.PathHandler {
     }
 }
 
-enum class PdfLayout { SINGLE, TWO_PAGE, CONTINUOUS }
