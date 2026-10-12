@@ -1,5 +1,11 @@
 package com.filewall.ui.ai
 
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.Surface
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -41,7 +47,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -102,7 +107,12 @@ fun AiChatSheet(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("ai_consent", Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
-    var allowed by remember { mutableStateOf(consentKey != null && prefs.getBoolean(consentKey, false)) }
+    var allowed by remember {
+        mutableStateOf(
+            consentKey != null &&
+                (com.filewall.data.ai.AiConsent.allAllowed(context) || prefs.getBoolean(consentKey, false)),
+        )
+    }
     var contextText by remember { mutableStateOf<String?>(null) }
     val turns = remember { mutableStateListOf<GeminiClient.Turn>() }
     var chatId by remember { mutableStateOf(UUID.randomUUID().toString()) }
@@ -189,11 +199,16 @@ fun AiChatSheet(
         if (granted) startListening()
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Full screen, not a pop-up: the chat takes over the whole screen.
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.88f)
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.systemBars)
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -383,6 +398,7 @@ fun AiChatSheet(
                 }
                 AiDisclaimer()
             }
+        }
         }
     }
 }

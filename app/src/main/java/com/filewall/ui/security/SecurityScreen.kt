@@ -1,5 +1,6 @@
 package com.filewall.ui.security
 
+import androidx.compose.material3.Switch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -167,6 +168,38 @@ fun SecurityScreen(
             }
         }
 
+        item {
+            var allowAll by remember { mutableStateOf(com.filewall.data.ai.AiConsent.allAllowed(driveContext)) }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text(
+                        text = "Let Ask AI see my files",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Gemini can read your visible files without asking each time. Hidden files always ask first.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = allowAll,
+                    onCheckedChange = {
+                        allowAll = it
+                        com.filewall.data.ai.AiConsent.setAllAllowed(driveContext, it)
+                    },
+                )
+            }
+        }
         item {
             val chosen = com.filewall.data.drive.DriveFolder.get(driveContext) != null
             Column(
