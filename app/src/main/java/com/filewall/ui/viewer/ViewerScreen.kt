@@ -129,7 +129,8 @@ fun ViewerScreen(
         // content expands to fill the freed space.
         Column(Modifier.fillMaxSize()) {
             // -------------------------------------------------------- top bar
-            AnimatedVisibility(visible = detailsVisible) {
+            // PDFs have their own bar with back, so this one (and its second back button) is hidden.
+            AnimatedVisibility(visible = detailsVisible && !item.isPdf) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -263,7 +264,7 @@ fun ViewerScreen(
 
                 // Controls live inside the stage box, pinned bottom-right — always above the
                 // details sheet because the sheet is a separate row below this whole box.
-                Row(
+                if (!item.isPdf) Row(
                     Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp),
@@ -346,32 +347,6 @@ private fun ItemDetailsCard(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
-        // Preview: a page on a grey panel.
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                Modifier
-                    .fillMaxHeight(0.84f)
-                    .aspectRatio(0.72f)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = item.extension.uppercase().ifEmpty { "FILE" },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color(0xFF5F6368),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(18.dp))
         Text(
             text = item.name,
             style = MaterialTheme.typography.headlineSmall,
