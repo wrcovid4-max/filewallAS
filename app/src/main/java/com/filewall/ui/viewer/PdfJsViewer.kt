@@ -1,5 +1,10 @@
 package com.filewall.ui.viewer
 
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.CountDownLatch
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import com.filewall.ui.ai.AiChatSheet
 import androidx.compose.material.icons.filled.AutoAwesome
 import android.content.Context
@@ -165,6 +170,8 @@ fun PdfJsViewer(
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
     saveCopy: suspend (ByteArray, String) -> Boolean = { _, _ -> false },
+    fullScreen: Boolean = false,
+    onFullScreenChange: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -191,7 +198,7 @@ fun PdfJsViewer(
 
     LaunchedEffect(item.id) {
         val file = withContext(Dispatchers.IO) { runCatching { decryptToCache(item) }.getOrNull() }
-        docHandler.file = file
+        docHandler.publish(file)
         Log.i(DOC_TAG, "open: ${item.name} decrypted=${file != null}")
         failed = file == null
         ready = file != null
@@ -248,7 +255,7 @@ fun PdfJsViewer(
         }
         Column(Modifier.fillMaxSize()) {
             // Top bar.
-            Row(
+            if (!fullScreen) Row(
                 Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -322,7 +329,7 @@ fun PdfJsViewer(
             }
 
             // Search bar, shown under the top bar when search is on.
-            if (searchOpen) {
+            if (searchOpen && !fullScreen) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -389,11 +396,6 @@ fun PdfJsViewer(
                         color = Color.Black,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(32.dp).align(Alignment.Center),
-                    )
-
-                    !ready -> CircularProgressIndicator(
-                        color = Color(0xFF5F6368),
-                        modifier = Modifier.align(Alignment.Center),
                     )
 
                     else -> AndroidView(
@@ -469,20 +471,15 @@ fun PdfJsViewer(
             }
 
             // Bottom tool sheet: the Acrobat actions, minus Edit PDF.
-            Column(
+            if (!fullScreen) Column(
                 Modifier
                     .fillMaxWidth()
                     .background(BarColor)
                     .padding(top = 10.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(
-                    Modifier
-                        .size(width = 40.dp, height = 4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color(0xFF5F6368)),
-                )
-                Spacer(Modifier.height(12.dp))
+                GrabHandle(fullScreen = false, onChange = onFullScreenChange)
+                Spacer(Modifier.height(8.dp))
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -502,7 +499,38 @@ fun PdfJsViewer(
                     SheetTool(Icons.Filled.Apps, "More tools", selected = false) { showMore = true }
                 }
             }
+            if (fullScreen) GrabHandle(fullScreen = true, onChange = onFullScreenChange)
         }
+    }
+}
+
+/** The grab bar. Drag it down for full screen; drag it back up to leave full screen. */
+@Composable
+private fun GrabHandle(fullScreen: Boolean, onChange: (Boolean) -> Unit) {
+    val threshold = with(LocalDensity.current) { 60.dp.toPx() }
+    var drag by remember { mutableStateOf(0f) }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(if (fullScreen) 28.dp else 20.dp)
+            .pointerInput(fullScreen) {
+                detectVerticalDragGestures(
+                    onDragStart = { drag = 0f },
+                    onVerticalDrag = { _, amount -> drag += amount },
+                    onDragEnd = {
+                        if (!fullScreen && drag > threshold) onChange(true)
+                        if (fullScreen && drag < -threshold) onChange(false)
+                    },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size(width = 40.dp, height = 4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color(0xFF5F6368)),
+        )
     }
 }
 
@@ -530,8 +558,8 @@ private fun BarIcon(
     tint: Color = IconColor,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
-        Icon(icon, contentDescription = description, tint = tint)
+    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+        Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(22.dp))
     }
 }
 
@@ -703,11 +731,21 @@ private class PdfJsAssetHandler(private val context: Context) : WebViewAssetLoad
     }
 }
 
-/** Serves the one document being viewed, from the decrypted cache copy. */
+/**
+ * Serves the one document being viewed. The engine starts loading before the file is ready;
+ * a request for the file waits here until it has been decrypted.
+ */
 private class PdfDocHandler : WebViewAssetLoader.PathHandler {
-    @Volatile var file: File? = null
+    private val ready = CountDownLatch(1)
+    @Volatile private var file: File? = null
+
+    fun publish(decrypted: File?) {
+        file = decrypted
+        ready.countDown()
+    }
 
     override fun handle(path: String): WebResourceResponse? {
+        ready.await(60, TimeUnit.SECONDS)
         val f = file ?: return null
         return runCatching { WebResourceResponse("application/pdf", null, FileInputStream(f)) }.getOrNull()
     }

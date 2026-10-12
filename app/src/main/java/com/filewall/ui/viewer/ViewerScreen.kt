@@ -87,7 +87,7 @@ fun ViewerScreen(
     item: VaultItem,
     loadImage: suspend (VaultItem) -> ImageBitmap?,
     videoPlayer: @Composable (Modifier) -> Unit,
-    pdfViewer: @Composable (Modifier) -> Unit,
+    pdfViewer: @Composable (Modifier, Boolean, (Boolean) -> Unit) -> Unit,
     onClose: () -> Unit,
     onExport: () -> Unit,
     onMove: () -> Unit,
@@ -257,7 +257,7 @@ fun ViewerScreen(
                                 scaleY = animatedScale,
                                 translationX = offsetX,
                                 translationY = offsetY,
-                            ),
+                            ), !detailsVisible, { detailsVisible = !it }
                     )
 
                     else -> NoPreview(onOpenExternally)

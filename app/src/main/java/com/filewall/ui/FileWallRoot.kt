@@ -294,11 +294,13 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     modifier = playerModifier,
                 )
             },
-            pdfViewer = { pdfModifier ->
+            pdfViewer = { pdfModifier, fullScreen, onFullScreenChange ->
                 com.filewall.ui.viewer.PdfJsViewer(
                     item = item,
                     decryptToCache = { container.repository.materialisePreview(it) },
                     modifier = pdfModifier,
+                    fullScreen = fullScreen,
+                    onFullScreenChange = onFullScreenChange,
                     onClose = { viewerOpen = false },
                     saveCopy = { bytes, name -> saveMarkedCopy(context, container, item, bytes, name) },
                 )
