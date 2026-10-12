@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -55,13 +58,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.filewall.ai.GeminiClient
+import com.filewall.data.ai.ChatHistory
+import com.filewall.data.ai.SavedChat
 import com.filewall.ui.common.AiDisclaimer
 import com.filewall.ui.common.InfoIcon
 import kotlinx.coroutines.launch
+import java.text.DateFormat
+import java.util.Date
+import java.util.UUID
 
 private const val AI_TAG = "FileWallDoc"
 private const val CONTEXT_LIMIT = 60_000
@@ -70,11 +79,11 @@ private const val MODEL_NOTE =
     "Powered by Google Gemini. If the model is busy, FileWall switches to a backup model automatically."
 
 /**
- * Ask AI, for one document or across the vault. The same inputs as Cash Memer's Ask AI:
- * suggestion chips, voice input, a new-chat button, the model note and the disclaimer.
+ * Ask AI, for one document or across the vault. Same inputs as Cash Memer's Ask AI: suggestion
+ * chips, voice input, new chat, Recent chats, the model note and the disclaimer.
  *
- * Nothing is sent until the user allows it. [consentKey] remembers the choice; null means the
- * item is hidden, so the user is asked every time and nothing is remembered.
+ * Nothing is sent until the user allows it. [consentKey] remembers the choice. When it is null
+ * the item is hidden: the user is asked every time, and no chat is saved to Recent chats.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,9 +105,12 @@ fun AiChatSheet(
     var allowed by remember { mutableStateOf(consentKey != null && prefs.getBoolean(consentKey, false)) }
     var contextText by remember { mutableStateOf<String?>(null) }
     val turns = remember { mutableStateListOf<GeminiClient.Turn>() }
+    var chatId by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
+    var historyTick by remember { mutableStateOf(0) }
     val listState = rememberLazyListState()
 
     fun send(raw: String) {
@@ -118,6 +130,19 @@ fun AiChatSheet(
             }
             Log.i(AI_TAG, "ai: answered ${answer.length} chars")
             turns.add(GeminiClient.Turn(false, answer))
+            if (consentKey != null) {
+                ChatHistory.save(
+                    context,
+                    SavedChat(
+                        id = chatId,
+                        title = (turns.firstOrNull { it.fromUser }?.text ?: "Chat").take(60),
+                        subtitle = subtitle,
+                        updatedAt = System.currentTimeMillis(),
+                        turns = turns.toList(),
+                    ),
+                )
+                historyTick++
+            }
             sending = false
             if (turns.isNotEmpty()) listState.animateScrollToItem(turns.size - 1)
         }
@@ -185,10 +210,22 @@ fun AiChatSheet(
                         maxLines = 1,
                     )
                 }
+                if (allowed && consentKey != null) {
+                    IconButton(onClick = { showHistory = !showHistory }) {
+                        Icon(
+                            Icons.Filled.History,
+                            contentDescription = "Recent chats",
+                            tint = if (showHistory) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 if (allowed) {
                     IconButton(onClick = {
+                        chatId = UUID.randomUUID().toString()
                         turns.clear()
                         input = ""
+                        showHistory = false
                         Log.i(AI_TAG, "ai: new chat")
                     }) {
                         Icon(Icons.Filled.Add, contentDescription = "New chat", tint = MaterialTheme.colorScheme.primary)
@@ -197,7 +234,7 @@ fun AiChatSheet(
                 InfoIcon(
                     "Ask AI",
                     "Ask questions about your files. Answers come from Google Gemini. The text you allow " +
-                        "is sent to Google when you ask. FileWall keeps no copy of it.",
+                        "is sent to Google when you ask. FileWall keeps no copy of it on Google's side.",
                 )
             }
             Text(
@@ -216,6 +253,23 @@ fun AiChatSheet(
                         Log.i(AI_TAG, "ai: allowed, remembered=${consentKey != null}")
                     },
                     onNotNow = onDismiss,
+                )
+            } else if (showHistory) {
+                val chats = remember(historyTick, showHistory) { ChatHistory.all(context) }
+                RecentChats(
+                    chats = chats,
+                    onOpen = { chat ->
+                        chatId = chat.id
+                        turns.clear()
+                        turns.addAll(chat.turns)
+                        showHistory = false
+                        Log.i(AI_TAG, "ai: opened saved chat ${chat.id}")
+                    },
+                    onDelete = { chat ->
+                        ChatHistory.delete(context, chat.id)
+                        historyTick++
+                        Log.i(AI_TAG, "ai: deleted saved chat ${chat.id}")
+                    },
                 )
             } else {
                 LazyColumn(
@@ -333,6 +387,71 @@ fun AiChatSheet(
     }
 }
 
+/** Recent chats: tap one to reopen it, or use the bin to delete it. */
+@Composable
+private fun RecentChats(
+    chats: List<SavedChat>,
+    onOpen: (SavedChat) -> Unit,
+    onDelete: (SavedChat) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = "Recent chats",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(8.dp))
+        if (chats.isEmpty()) {
+            Text(
+                text = "No chats yet. Your conversations will appear here.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(chats, key = { it.id }) { chat ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .clickable { onOpen(chat) }
+                            .padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = chat.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = "${chat.subtitle} · ${formatWhen(chat.updatedAt)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        IconButton(onClick = { onDelete(chat) }) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "Delete chat",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatWhen(millis: Long): String =
+    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(millis))
+
 @Composable
 private fun Bubble(turn: GeminiClient.Turn) {
     Row(
@@ -374,7 +493,8 @@ private fun ConsentCard(rememberChoice: Boolean, onAllow: () -> Unit, onNotNow: 
                 "To answer, FileWall sends the text it needs to Google Gemini. Choose Not now and nothing is sent. " +
                     "Your choice is remembered for this item."
             } else {
-                "This item is in the hidden vault, so you are asked every time. Nothing is remembered."
+                "This item is in the hidden vault, so you are asked every time. Nothing is remembered, " +
+                    "and the chat is not saved to Recent chats."
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
