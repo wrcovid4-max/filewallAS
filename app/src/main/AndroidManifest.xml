@@ -9,6 +9,8 @@
     <!-- Vault contents live in app-private storage and are imported through the
          system picker, so no broad media permission is ever requested. -->
 
+        <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:name=".FileWallApp"
         android:allowBackup="false"

@@ -252,6 +252,11 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             title = "Ask AI",
             subtitle = "Your vault",
             consentKey = "vault-summary",
+            suggestions = listOf(
+                "How many files do I have?",
+                "Which files are the largest?",
+                "What did I save most recently?",
+            ),
             loadContext = { summarizeVault(container) },
             onDismiss = { showAi = false },
         )
