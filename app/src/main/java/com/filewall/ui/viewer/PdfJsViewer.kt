@@ -189,6 +189,11 @@ fun PdfJsViewer(
     var tool by rememberSaveable(item.id) { mutableStateOf(PdfTool.NONE) }
     var showMore by remember(item.id) { mutableStateOf(false) }
     var showAi by remember(item.id) { mutableStateOf(false) }
+    // In full screen the bars stay hidden until the document is tapped.
+    var barsVisible by rememberSaveable(item.id) { mutableStateOf(false) }
+    val showBars = !fullScreen || barsVisible
+    val tapRef = remember(item.id) { arrayOf<() -> Unit>({}) }
+    tapRef[0] = { barsVisible = !barsVisible }
     var searchOpen by remember(item.id) { mutableStateOf(false) }
     var searchText by remember(item.id) { mutableStateOf("") }
     var lastQuery by remember(item.id) { mutableStateOf("") }
@@ -256,14 +261,14 @@ fun PdfJsViewer(
         }
         Column(Modifier.fillMaxSize()) {
             // Top bar.
-            if (!fullScreen) Row(
+            if (showBars) Row(
                 Modifier
                     .fillMaxWidth()
                     .height(56.dp)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BarIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onClose)
+                BarIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = { if (fullScreen) onFullScreenChange(false) else onClose() })
                 Spacer(Modifier.weight(1f))
                 BarIcon(
                     Icons.Filled.Highlight,
@@ -327,7 +332,7 @@ fun PdfJsViewer(
             }
 
             // Search bar, shown under the top bar when search is on.
-            if (searchOpen && !fullScreen) {
+            if (searchOpen && showBars) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -431,6 +436,20 @@ fun PdfJsViewer(
                                         (v as WebView).evaluateJavascript(REFIT_JS, null)
                                     }
                                 }
+                                // A tap on the document toggles the bars. The PDF still gets every touch.
+                                val tapDetector = android.view.GestureDetector(
+                                    ctx,
+                                    object : android.view.GestureDetector.SimpleOnGestureListener() {
+                                        override fun onSingleTapUp(e: android.view.MotionEvent): Boolean {
+                                            tapRef[0]()
+                                            return false
+                                        }
+                                    },
+                                )
+                                setOnTouchListener { _, event ->
+                                    tapDetector.onTouchEvent(event)
+                                    false
+                                }
                                 viewHolder[0] = this
                             }
                         },
@@ -479,7 +498,7 @@ fun PdfJsViewer(
             }
 
             // Bottom tool sheet: the Acrobat actions, minus Edit PDF.
-            if (!fullScreen) Column(
+            if (showBars) Column(
                 Modifier
                     .fillMaxWidth()
                     .background(BarColor)
@@ -507,7 +526,7 @@ fun PdfJsViewer(
                     SheetTool(Icons.Filled.Apps, "More tools", selected = false) { showMore = true }
                 }
             }
-            if (fullScreen) GrabHandle(fullScreen = true, onChange = onFullScreenChange)
+            if (fullScreen && !barsVisible) GrabHandle(fullScreen = true, onChange = onFullScreenChange)
         }
     }
 }
