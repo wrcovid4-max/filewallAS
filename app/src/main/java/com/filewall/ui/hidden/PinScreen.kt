@@ -232,6 +232,7 @@ private fun PinPad(
                     Icons.Filled.Backspace,
                     contentDescription = "Backspace",
                     tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(28.dp),
                 )
             }
             PinKey(
@@ -255,6 +256,7 @@ private fun PinPad(
                 Icon(
                     Icons.Filled.Check,
                     contentDescription = "Confirm",
+                    modifier = Modifier.size(28.dp),
                     tint = if (confirmEnabled) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
