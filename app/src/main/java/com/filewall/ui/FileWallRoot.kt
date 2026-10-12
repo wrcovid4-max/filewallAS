@@ -277,6 +277,8 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     item = item,
                     decryptToCache = { container.repository.materialisePreview(it) },
                     modifier = pdfModifier,
+                    onClose = { viewerOpen = false },
+                    saveCopy = { bytes, name -> saveMarkedCopy(context, container, item, bytes, name) },
                 )
             },
             onClose = { viewerOpen = false },
@@ -391,5 +393,30 @@ private suspend fun openExternally(
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
+    }
+}
+
+/** Saves a marked-up PDF as a new file beside the original. The original is never changed. */
+private suspend fun saveMarkedCopy(
+    context: android.content.Context,
+    container: AppContainer,
+    item: VaultItem,
+    bytes: ByteArray,
+    name: String,
+) {
+    val dir = java.io.File(context.cacheDir, "preview").apply { mkdirs() }
+    val tmp = java.io.File(dir, "save-${System.currentTimeMillis()}.pdf")
+    try {
+        tmp.writeBytes(bytes)
+        container.repository.importPlaintext(
+            name = name,
+            mimeType = "application/pdf",
+            hidden = item.hidden,
+            folderId = item.folderId,
+            addedAt = System.currentTimeMillis(),
+            source = tmp,
+        )
+    } finally {
+        tmp.delete()
     }
 }

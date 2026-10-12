@@ -1,18 +1,21 @@
 package com.filewall.ui.viewer
 
 import android.content.Context
+import android.content.Intent
+import android.speech.tts.TextToSpeech
+import android.util.Base64
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -26,15 +29,25 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Highlight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,10 +55,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,25 +71,37 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.FileProvider
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
 import com.filewall.model.VaultItem
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import org.json.JSONTokener
 import java.io.File
 import java.io.FileInputStream
+import kotlin.coroutines.resume
 
 private const val ORIGIN = "https://appassets.androidplatform.net"
 private const val VIEWER_URL = "$ORIGIN/assets/web/viewer.html?file=$ORIGIN/doc/current.pdf"
 
 // Acrobat-style colours.
 private val BarColor = Color(0xFF1F1F1F)
-private val SheetColor = Color(0xFF1F1F1F)
+private val SearchColor = Color(0xFF2B2B2B)
 private val IconColor = Color(0xFFE8EAED)
 private val DimIconColor = Color(0xFF6B6F76)
 private val ToolActiveColor = Color(0xFFB39DDB)
@@ -104,15 +131,38 @@ private const val REFIT_JS =
         "if(a&&a.pdfViewer){a.pdfViewer.currentScaleValue='auto';}" +
         "window.dispatchEvent(new Event('resize'));})();"
 
-/** Acrobat-style reading view: dark top bar, white page, dark tool sheet and a gradient button. */
+// Starts building the marked-up PDF in the page. The result lands in window.__fwSave.
+private const val SAVE_PDF_JS =
+    "window.__fwSave=null;(function(){var a=window.PDFViewerApplication;" +
+        "if(!a||!a.pdfDocument){window.__fwSave='ERR';return;}" +
+        "a.pdfDocument.saveDocument().then(function(d){var s='',C=32768;" +
+        "for(var i=0;i<d.length;i+=C){s+=String.fromCharCode.apply(null,d.subarray(i,i+C));}" +
+        "window.__fwSave=btoa(s);}).catch(function(){window.__fwSave='ERR';});})();"
+
+// Collects the text of every page into window.__fwText, as a JSON array of strings.
+private const val EXTRACT_TEXT_JS =
+    "window.__fwText=null;(async function(){var a=window.PDFViewerApplication;var out=[];" +
+        "var n=a.pdfDocument.numPages;for(var i=1;i<=n;i++){var p=await a.pdfDocument.getPage(i);" +
+        "var t=await p.getTextContent();out.push(t.items.map(function(x){return x.str}).join(' '));}" +
+        "window.__fwText=JSON.stringify(out);})().catch(function(){window.__fwText='[]';});"
+
+/**
+ * Acrobat-style reading view: dark top bar, white page, dark tool sheet and a gradient button.
+ *
+ * Top bar: back, highlight, search, read aloud, save a marked copy, share, and more.
+ * The PDF is decrypted only into the preview cache. Saving writes a new copy into the vault;
+ * the original file is never changed.
+ */
 @Composable
 fun PdfJsViewer(
     item: VaultItem,
     decryptToCache: suspend (VaultItem) -> File,
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
+    saveCopy: suspend (ByteArray, String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val docHandler = remember(item.id) { PdfDocHandler() }
     val loader = remember(item.id) {
         WebViewAssetLoader.Builder()
@@ -125,13 +175,52 @@ fun PdfJsViewer(
     var layout by rememberSaveable(item.id) { mutableStateOf(PdfLayout.CONTINUOUS) }
     var tool by rememberSaveable(item.id) { mutableStateOf(PdfTool.NONE) }
     var showMore by remember(item.id) { mutableStateOf(false) }
+    var searchOpen by remember(item.id) { mutableStateOf(false) }
+    var searchText by remember(item.id) { mutableStateOf("") }
+    var lastQuery by remember(item.id) { mutableStateOf("") }
+    var readAloud by remember(item.id) { mutableStateOf(false) }
+    var saving by remember(item.id) { mutableStateOf(false) }
     val viewHolder = remember(item.id) { arrayOfNulls<WebView>(1) }
+    val speechHolder = remember(item.id) { arrayOfNulls<TextToSpeech>(1) }
 
     LaunchedEffect(item.id) {
         val file = withContext(Dispatchers.IO) { runCatching { decryptToCache(item) }.getOrNull() }
         docHandler.file = file
         failed = file == null
         ready = file != null
+    }
+
+    // Read aloud: start when switched on, and stop and release the speech engine on leaving.
+    LaunchedEffect(readAloud) {
+        if (!readAloud) return@LaunchedEffect
+        val webView = viewHolder[0]
+        val engine = createSpeech(context)
+        if (webView == null || engine == null) {
+            readAloud = false
+            Toast.makeText(context, "Read aloud is not available", Toast.LENGTH_SHORT).show()
+            return@LaunchedEffect
+        }
+        speechHolder[0] = engine
+        val pages = webView.readPageTexts()
+        if (pages.isEmpty()) {
+            readAloud = false
+            Toast.makeText(context, "This PDF has no text to read", Toast.LENGTH_SHORT).show()
+            return@LaunchedEffect
+        }
+        var first = true
+        pages.forEach { page ->
+            page.chunked(3500).forEach { chunk ->
+                engine.speak(chunk, if (first) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, null)
+                first = false
+            }
+        }
+    }
+    DisposableEffect(item.id) {
+        onDispose {
+            speechHolder[0]?.stop()
+            speechHolder[0]?.shutdown()
+            speechHolder[0] = null
+        }
     }
 
     Box(
@@ -141,7 +230,7 @@ fun PdfJsViewer(
             .windowInsetsPadding(WindowInsets.systemBars),
     ) {
         Column(Modifier.fillMaxSize()) {
-            // Top bar: back, highlight, and more.
+            // Top bar.
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -149,13 +238,48 @@ fun PdfJsViewer(
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BarIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClose)
+                BarIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onClose)
                 Spacer(Modifier.weight(1f))
                 BarIcon(
                     Icons.Filled.Highlight,
                     "Highlight",
                     tint = if (tool == PdfTool.HIGHLIGHT) ToolActiveColor else IconColor,
                 ) { tool = toggle(tool, PdfTool.HIGHLIGHT, viewHolder[0]) }
+                BarIcon(
+                    Icons.Filled.Search,
+                    "Search",
+                    tint = if (searchOpen) ToolActiveColor else IconColor,
+                ) {
+                    searchOpen = !searchOpen
+                    if (!searchOpen) {
+                        searchText = ""
+                        lastQuery = ""
+                    }
+                }
+                BarIcon(
+                    Icons.AutoMirrored.Filled.VolumeUp,
+                    "Read aloud",
+                    tint = if (readAloud) ToolActiveColor else IconColor,
+                ) { readAloud = !readAloud }
+                BarIcon(Icons.Filled.Save, "Save marked copy") {
+                    if (!saving && ready) {
+                        saving = true
+                        scope.launch {
+                            val bytes = viewHolder[0]?.readPdfBytes()
+                            if (bytes == null) {
+                                Toast.makeText(context, "Could not save the markup", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val name = item.name.substringBeforeLast('.') + " (marked).pdf"
+                                saveCopy(bytes, name)
+                                Toast.makeText(context, "Saved as $name", Toast.LENGTH_SHORT).show()
+                            }
+                            saving = false
+                        }
+                    }
+                }
+                BarIcon(Icons.Filled.Share, "Share") {
+                    scope.launch { shareDocument(context, decryptToCache, item) }
+                }
                 Box {
                     BarIcon(Icons.Filled.MoreVert, "More") { showMore = true }
                     MoreMenu(
@@ -168,6 +292,60 @@ fun PdfJsViewer(
                             showMore = false
                         },
                     )
+                }
+            }
+
+            // Search bar, shown under the top bar when search is on.
+            if (searchOpen) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SearchColor)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BasicTextField(
+                        value = searchText,
+                        onValueChange = { searchText = it },
+                        singleLine = true,
+                        textStyle = TextStyle(color = IconColor, fontSize = 15.sp),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = {
+                            viewHolder[0]?.evaluateJavascript(
+                                findScript(searchText, previous = false, again = searchText == lastQuery),
+                                null,
+                            )
+                            lastQuery = searchText
+                        }),
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = {
+                        viewHolder[0]?.evaluateJavascript(
+                            findScript(searchText, previous = true, again = searchText == lastQuery),
+                            null,
+                        )
+                        lastQuery = searchText
+                    }) {
+                        Icon(Icons.Filled.KeyboardArrowUp, "Previous match", tint = IconColor)
+                    }
+                    IconButton(onClick = {
+                        viewHolder[0]?.evaluateJavascript(
+                            findScript(searchText, previous = false, again = searchText == lastQuery),
+                            null,
+                        )
+                        lastQuery = searchText
+                    }) {
+                        Icon(Icons.Filled.KeyboardArrowDown, "Next match", tint = IconColor)
+                    }
+                    IconButton(onClick = {
+                        searchOpen = false
+                        searchText = ""
+                        lastQuery = ""
+                    }) {
+                        Icon(Icons.Filled.Close, "Close search", tint = IconColor)
+                    }
                 }
             }
 
@@ -236,7 +414,7 @@ fun PdfJsViewer(
                     )
                 }
 
-                // Gradient action button, as in Acrobat: it opens the tool sheet's first action.
+                // Gradient action button, as in Acrobat: it turns the Draw tool on and off.
                 if (ready && !failed) {
                     Box(
                         Modifier
@@ -250,9 +428,7 @@ fun PdfJsViewer(
                                     listOf(Color(0xFFE8337A), Color(0xFF7B2FF7)),
                                 ),
                             )
-                            .clickable {
-                                tool = toggle(tool, PdfTool.DRAW, viewHolder[0])
-                            },
+                            .clickable { tool = toggle(tool, PdfTool.DRAW, viewHolder[0]) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -265,11 +441,11 @@ fun PdfJsViewer(
                 }
             }
 
-            // Bottom tool sheet: the same six actions as Acrobat.
+            // Bottom tool sheet: the Acrobat actions, minus Edit PDF.
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .background(SheetColor)
+                    .background(BarColor)
                     .padding(top = 10.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -284,7 +460,6 @@ fun PdfJsViewer(
                     Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    SheetTool(Icons.Filled.Edit, "Edit PDF", enabled = false) {}
                     SheetTool(Icons.Filled.ChatBubbleOutline, "Comment", tool == PdfTool.COMMENT) {
                         tool = toggle(tool, PdfTool.COMMENT, viewHolder[0])
                     }
@@ -337,19 +512,14 @@ private fun SheetTool(
     icon: ImageVector,
     label: String,
     selected: Boolean = false,
-    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    val tint = when {
-        !enabled -> DimIconColor
-        selected -> ToolActiveColor
-        else -> IconColor
-    }
+    val tint = if (selected) ToolActiveColor else IconColor
     Column(
         Modifier
             .width(64.dp)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -387,6 +557,79 @@ private fun MoreMenu(
             onClick = { onSelect(PdfLayout.CONTINUOUS) },
         )
     }
+}
+
+/** Shares the document through the app's file provider. Runs only when the user taps Share. */
+private suspend fun shareDocument(context: Context, decryptToCache: suspend (VaultItem) -> File, item: VaultItem) {
+    runCatching {
+        val file = decryptToCache(item)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, item.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
+/** Reads a value from the page. Null when the page returns nothing usable. */
+private suspend fun WebView.evalString(js: String): String? = suspendCancellableCoroutine { cont ->
+    evaluateJavascript(js) { result -> if (cont.isActive) cont.resume(result) }
+}
+
+/** Builds the marked-up PDF inside the page and returns its bytes, or null if it fails. */
+private suspend fun WebView.readPdfBytes(): ByteArray? {
+    evaluateJavascript(SAVE_PDF_JS, null)
+    repeat(600) {
+        val raw = evalString("window.__fwSave") ?: return null
+        val value = JSONTokener(raw).nextValue()
+        when (value) {
+            is String -> return if (value == "ERR") null else Base64.decode(value, Base64.DEFAULT)
+            JSONObject.NULL, null -> delay(100)
+            else -> return null
+        }
+    }
+    return null
+}
+
+/** Reads the text of every page, one string per page. Empty when the PDF has no text. */
+private suspend fun WebView.readPageTexts(): List<String> {
+    evaluateJavascript(EXTRACT_TEXT_JS, null)
+    repeat(600) {
+        val raw = evalString("window.__fwText") ?: return emptyList()
+        val value = JSONTokener(raw).nextValue()
+        when (value) {
+            is String -> {
+                val array = JSONArray(value)
+                return List(array.length()) { array.getString(it).trim() }.filter { it.isNotEmpty() }
+            }
+            JSONObject.NULL, null -> delay(100)
+            else -> return emptyList()
+        }
+    }
+    return emptyList()
+}
+
+/** Starts the phone's text-to-speech engine and waits until it is ready. Null if unavailable. */
+private suspend fun createSpeech(context: Context): TextToSpeech? {
+    val ready = CompletableDeferred<Boolean>()
+    val engine = TextToSpeech(context) { status -> ready.complete(status == TextToSpeech.SUCCESS) }
+    return if (ready.await()) {
+        engine
+    } else {
+        engine.shutdown()
+        null
+    }
+}
+
+/** Find text in the PDF. Uses the engine's own search, so matches are highlighted in the page. */
+private fun findScript(query: String, previous: Boolean, again: Boolean): String {
+    val text = JSONObject.quote(query)
+    val type = if (again) "again" else ""
+    return "(function(){var a=window.PDFViewerApplication;if(!a||!a.eventBus)return;" +
+        "a.eventBus.dispatch('find',{source:window,type:'$type',query:$text,caseSensitive:false," +
+        "entireWord:false,highlightAll:true,findPrevious:$previous,matchDiacritics:false});})();"
 }
 
 /** PDF.js spread and scroll modes: 0 none / 1 odd spreads; 0 vertical / 3 page. */
@@ -440,4 +683,3 @@ private class PdfDocHandler : WebViewAssetLoader.PathHandler {
         return runCatching { WebResourceResponse("application/pdf", null, FileInputStream(f)) }.getOrNull()
     }
 }
-
