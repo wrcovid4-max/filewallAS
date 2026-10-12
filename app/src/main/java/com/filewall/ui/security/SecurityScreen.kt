@@ -184,7 +184,8 @@ fun SecurityScreen(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = if (chosen) {
-                        "Exports go straight to this folder as plain copies, so they open anywhere. Hidden files still ask first."
+                        "Saving to \"${com.filewall.data.drive.DriveFolder.displayName(driveContext) ?: "your chosen folder"}\". " +
+                            "Files appear there after you export them. Plain copies, so they open anywhere. Hidden files still ask first."
                     } else {
                         "Choose a folder in Google Drive once. Exports go there without asking each time. No Google setup needed."
                     },

@@ -474,7 +474,8 @@ private suspend fun summarizeVault(container: AppContainer): String =
 
 /**
  * Export goes straight to the chosen Drive folder when one is set. Hidden files always ask
- * where to save, so they never reach Drive without the user choosing it.
+ * where to save, so they never reach Drive without the user choosing it. If the Drive folder
+ * refuses the file, the user is told and asked where to save instead.
  */
 private fun exportWithDefault(
     context: android.content.Context,
@@ -482,8 +483,11 @@ private fun exportWithDefault(
     toUri: (android.net.Uri) -> Unit,
     askWhere: () -> Unit,
 ) {
-    val target = if (!item.hidden && com.filewall.data.drive.DriveFolder.get(context) != null) {
-        runCatching { com.filewall.data.drive.DriveFolder.createTarget(context, item.name) }.getOrNull()
+    val folderChosen = !item.hidden && com.filewall.data.drive.DriveFolder.get(context) != null
+    val target = if (folderChosen) {
+        runCatching { com.filewall.data.drive.DriveFolder.createTarget(context, item.name) }
+            .onFailure { android.util.Log.e("FileWallDoc", "drive: export failed for ${item.name}", it) }
+            .getOrNull()
     } else {
         null
     }
@@ -491,6 +495,13 @@ private fun exportWithDefault(
         com.filewall.data.drive.DriveMarks.add(context, item.id)
         toUri(target)
     } else {
+        if (folderChosen) {
+            android.widget.Toast.makeText(
+                context,
+                "The Drive folder did not accept this file. Choose where to save it.",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
         askWhere()
     }
 }
