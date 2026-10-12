@@ -1,5 +1,11 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -331,61 +337,136 @@ private fun ItemDetailsCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier
+    // Laid out like Google Drive's file details: preview, title, labelled fields, protection.
+    Column(
+        modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            .heightIn(max = 360.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
-        Column(Modifier.padding(18.dp)) {
-            Text(
-                stringResourceSafe(R.string.item_details),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(12.dp))
-            androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            Spacer(Modifier.height(12.dp))
-
-            DetailRow(stringResourceSafe(R.string.detail_name), item.name)
-            DetailRow(stringResourceSafe(R.string.detail_type), item.typeLabel())
-            DetailRow(stringResourceSafe(R.string.detail_size), formatBytes(item.sizeBytes))
-            DetailRow(stringResourceSafe(R.string.detail_added), formatTimestamp(item.addedAt))
-
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onExport, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.SaveAlt, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResourceSafe(R.string.action_export), maxLines = 1)
-                }
-                OutlinedButton(onClick = onMove, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.DriveFileMove, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResourceSafe(R.string.action_move), maxLines = 1)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onRename, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.Edit, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResourceSafe(R.string.action_rename), maxLines = 1)
-                }
-                TextButton(
-                    onClick = onDelete,
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(DangerContainer, MaterialTheme.shapes.extraLarge),
-                ) {
-                    Icon(Icons.Filled.Delete, null, Modifier.size(18.dp), tint = OnDangerContainer)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResourceSafe(R.string.action_delete), color = OnDangerContainer, maxLines = 1)
-                }
+        // Preview: a page on a grey panel.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                Modifier
+                    .fillMaxHeight(0.84f)
+                    .aspectRatio(0.72f)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = item.extension.uppercase().ifEmpty { "FILE" },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color(0xFF5F6368),
+                )
             }
         }
+
+        Spacer(Modifier.height(18.dp))
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(18.dp))
+
+        OverviewField("Type", item.typeLabel())
+        OverviewField("Location", if (item.hidden) "Hidden vault" else "FileWall vault")
+        Row(Modifier.fillMaxWidth()) {
+            OverviewField("Size", formatBytes(item.sizeBytes), Modifier.weight(1f))
+            OverviewField(
+                "Category",
+                item.category.name.lowercase().replaceFirstChar { it.uppercase() },
+                Modifier.weight(1f),
+            )
+        }
+        OverviewField("Created", formatTimestamp(item.addedAt))
+        OverviewField("Modified", if (item.updatedAt > 0) formatTimestamp(item.updatedAt) else "—")
+
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(
+                    "Encrypted on this device",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    "Only you can open this file",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onExport, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.SaveAlt, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResourceSafe(R.string.action_export), maxLines = 1)
+            }
+            OutlinedButton(onClick = onMove, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.DriveFileMove, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResourceSafe(R.string.action_move), maxLines = 1)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onRename, modifier = Modifier.weight(1f)) {
+                Text(stringResourceSafe(R.string.action_rename), maxLines = 1)
+            }
+            OutlinedButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
+                Text(stringResourceSafe(R.string.action_delete), maxLines = 1)
+            }
+        }
+    }
+}
+
+/** One labelled field in the overview: a grey label above the value. */
+@Composable
+private fun OverviewField(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier.padding(bottom = 14.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

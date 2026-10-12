@@ -201,6 +201,17 @@ class VaultRepository(
         ).also { dao.upsertItem(it) }
     }
 
+    /** Replaces an existing file's contents with new plaintext, keeping its place in the vault. */
+    suspend fun replacePlaintext(item: VaultItem, source: File): VaultItem = withContext(Dispatchers.IO) {
+        val blob = File(blobDir, item.blobName)
+        source.inputStream().use { input ->
+            blob.outputStream().use { output -> crypto.encrypt(input, output) }
+        }
+        android.util.Log.i("FileWallDoc", "replace: ${item.name} now ${source.length()} bytes")
+        item.copy(sizeBytes = source.length(), updatedAt = System.currentTimeMillis())
+            .also { dao.upsertItem(it) }
+    }
+
     // ------------------------------------------------------------------ reading
 
     /** Decrypted preview bytes for a tile, or null when the item has no preview. */

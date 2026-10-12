@@ -396,26 +396,43 @@ private suspend fun openExternally(
     }
 }
 
-/** Saves a marked-up PDF as a new file beside the original. The original is never changed. */
+/**
+ * Saves the marked-up PDF beside the original. Saving again replaces the same
+ * "(marked)" copy instead of adding another file. Returns false if the save fails.
+ */
 private suspend fun saveMarkedCopy(
     context: android.content.Context,
     container: AppContainer,
     item: VaultItem,
     bytes: ByteArray,
     name: String,
-) {
+): Boolean {
     val dir = java.io.File(context.cacheDir, "preview").apply { mkdirs() }
     val tmp = java.io.File(dir, "save-${System.currentTimeMillis()}.pdf")
-    try {
+    return try {
         tmp.writeBytes(bytes)
-        container.repository.importPlaintext(
-            name = name,
-            mimeType = "application/pdf",
-            hidden = item.hidden,
-            folderId = item.folderId,
-            addedAt = System.currentTimeMillis(),
-            source = tmp,
-        )
+        val existing = container.repository.allItems().firstOrNull {
+            it.name == name && it.folderId == item.folderId && it.hidden == item.hidden && it.deletedAt == 0L
+        }
+        if (existing != null) {
+            android.util.Log.i("FileWallDoc", "save: replacing ${existing.id} with ${bytes.size} bytes")
+            container.repository.replacePlaintext(existing, tmp)
+        } else {
+            android.util.Log.i("FileWallDoc", "save: first save of $name (${bytes.size} bytes)")
+            container.repository.importPlaintext(
+                name = name,
+                mimeType = "application/pdf",
+                hidden = item.hidden,
+                folderId = item.folderId,
+                addedAt = System.currentTimeMillis(),
+                source = tmp,
+            )
+        }
+        android.util.Log.i("FileWallDoc", "save: done $name")
+        true
+    } catch (e: Exception) {
+        android.util.Log.e("FileWallDoc", "save failed: $name", e)
+        false
     } finally {
         tmp.delete()
     }

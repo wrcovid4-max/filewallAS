@@ -99,6 +99,9 @@ import kotlin.coroutines.resume
 private const val ORIGIN = "https://appassets.androidplatform.net"
 private const val VIEWER_URL = "$ORIGIN/assets/web/viewer.html?file=$ORIGIN/doc/current.pdf"
 
+// One log tag for everything that happens in the viewer: filter Logcat by FileWallDoc.
+private const val DOC_TAG = "FileWallDoc"
+
 // Acrobat-style colours.
 private val BarColor = Color(0xFF1F1F1F)
 private val SearchColor = Color(0xFF2B2B2B)
@@ -159,7 +162,7 @@ fun PdfJsViewer(
     decryptToCache: suspend (VaultItem) -> File,
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
-    saveCopy: suspend (ByteArray, String) -> Unit = { _, _ -> },
+    saveCopy: suspend (ByteArray, String) -> Boolean = { _, _ -> false },
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -186,6 +189,7 @@ fun PdfJsViewer(
     LaunchedEffect(item.id) {
         val file = withContext(Dispatchers.IO) { runCatching { decryptToCache(item) }.getOrNull() }
         docHandler.file = file
+        Log.i(DOC_TAG, "open: ${item.name} decrypted=${file != null}")
         failed = file == null
         ready = file != null
     }
@@ -202,6 +206,7 @@ fun PdfJsViewer(
         }
         speechHolder[0] = engine
         val pages = webView.readPageTexts()
+        Log.i(DOC_TAG, "read aloud: ${pages.size} page(s) with text")
         if (pages.isEmpty()) {
             readAloud = false
             Toast.makeText(context, "This PDF has no text to read", Toast.LENGTH_SHORT).show()
@@ -266,12 +271,17 @@ fun PdfJsViewer(
                         saving = true
                         scope.launch {
                             val bytes = viewHolder[0]?.readPdfBytes()
+                            Log.i(DOC_TAG, "save: marked copy bytes=${bytes?.size ?: -1}")
                             if (bytes == null) {
                                 Toast.makeText(context, "Could not save the markup", Toast.LENGTH_SHORT).show()
                             } else {
                                 val name = item.name.substringBeforeLast('.') + " (marked).pdf"
-                                saveCopy(bytes, name)
-                                Toast.makeText(context, "Saved as $name", Toast.LENGTH_SHORT).show()
+                                val ok = saveCopy(bytes, name)
+                                Toast.makeText(
+                                    context,
+                                    if (ok) "Saved as $name" else "Could not save the copy",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             }
                             saving = false
                         }
@@ -288,6 +298,7 @@ fun PdfJsViewer(
                         onDismiss = { showMore = false },
                         onSelect = { selected ->
                             layout = selected
+                            Log.i(DOC_TAG, "layout: $selected")
                             viewHolder[0]?.evaluateJavascript(layoutScript(selected), null)
                             showMore = false
                         },
@@ -313,6 +324,7 @@ fun PdfJsViewer(
                         textStyle = TextStyle(color = IconColor, fontSize = 15.sp),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = {
+                            Log.i(DOC_TAG, "search: \"$searchText\" previous=false")
                             viewHolder[0]?.evaluateJavascript(
                                 findScript(searchText, previous = false, again = searchText == lastQuery),
                                 null,
@@ -490,6 +502,7 @@ private fun toggle(current: PdfTool, wanted: PdfTool, view: WebView?): PdfTool {
         PdfTool.FILL_SIGN -> MODE_FILL_SIGN
     }
     view?.evaluateJavascript(editorModeScript(mode), null)
+    Log.i(DOC_TAG, "tool: $next")
     return next
 }
 
@@ -570,7 +583,8 @@ private suspend fun shareDocument(context: Context, decryptToCache: suspend (Vau
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, item.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
+        Log.i(DOC_TAG, "share: opened the share sheet for ${item.name}")
+    }.onFailure { Log.e(DOC_TAG, "share failed: ${item.name}", it) }
 }
 
 /** Reads a value from the page. Null when the page returns nothing usable. */
