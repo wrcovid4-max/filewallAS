@@ -50,6 +50,10 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Ask the display for 90 Hz. Android uses the closest mode the panel supports, so on a
+        // 90 Hz phone each frame has about 11 ms, instead of the 16 ms of a 60 Hz screen.
+        window.attributes = window.attributes.apply { preferredRefreshRate = 90f }
+
         consumeHandoff(intent)
         consumeShare(intent)
         requestNotificationPermissionIfNeeded()
