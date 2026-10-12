@@ -1,29 +1,45 @@
 package com.filewall.ui.viewer
 
-import android.webkit.WebChromeClient
-import android.webkit.ConsoleMessage
-import android.util.Log
 import android.content.Context
+import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Draw
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Highlight
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,16 +51,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
-import com.filewall.R
 import com.filewall.model.VaultItem
-import com.filewall.ui.common.stringResourceSafe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -53,32 +72,45 @@ import java.io.FileInputStream
 private const val ORIGIN = "https://appassets.androidplatform.net"
 private const val VIEWER_URL = "$ORIGIN/assets/web/viewer.html?file=$ORIGIN/doc/current.pdf"
 
+// Acrobat-style colours.
+private val BarColor = Color(0xFF1F1F1F)
+private val SheetColor = Color(0xFF1F1F1F)
+private val IconColor = Color(0xFFE8EAED)
+private val DimIconColor = Color(0xFF6B6F76)
+private val ToolActiveColor = Color(0xFFB39DDB)
+private val PageBackground = Color(0xFFFFFFFF)
+
+// PDF.js editor modes: 0 none, 3 free text (comment), 9 highlight, 13 stamp, 15 ink (draw).
+private const val MODE_NONE = 0
+private const val MODE_COMMENT = 3
+private const val MODE_HIGHLIGHT = 9
+private const val MODE_FILL_SIGN = 13
+private const val MODE_DRAW = 15
+
 // Export controls hidden: the document can be read here but not copied out through the viewer.
-private const val HIDE_EXPORT_CSS =
+// PDF.js's own toolbar is hidden too, because the Acrobat-style bar here replaces it.
+private const val HIDE_CHROME_CSS =
     "(function(){var s=document.createElement('style');" +
-        "s.textContent='#openFile,#print,#download,#secondaryOpenFile,#secondaryPrint,#secondaryDownload{display:none!important}';" +
+        "s.textContent='#openFile,#print,#download,#secondaryOpenFile,#secondaryPrint,#secondaryDownload{display:none!important}" +
+        "#toolbarContainer,#secondaryToolbar,#sidebarContainer,#findbar{display:none!important}" +
+        "#viewerContainer{top:0!important}" +
+        "#outerContainer,#viewerContainer{background:#ffffff!important}';" +
         "document.head.appendChild(s);})();"
 
-// Re-fit the pages to the real size of the viewer. Without this, a viewer opened before it has
-// been measured can lay its pages out at zero width and show a blank page.
+// Re-fit the pages to the real size of the viewer, so a viewer opened before it is measured
+// never shows a blank page.
 private const val REFIT_JS =
     "(function(){var a=window.PDFViewerApplication;" +
         "if(a&&a.pdfViewer){a.pdfViewer.currentScaleValue='auto';}" +
         "window.dispatchEvent(new Event('resize'));})();"
 
-/**
- * In-app PDF viewer built on PDF.js, the engine behind Firefox's PDF reader.
- *
- * Forms can be filled, links work, and annotations show. The viewer and its engine ship
- * inside the app, so nothing is loaded from the internet. The PDF is decrypted into the
- * preview cache, served to the viewer from memory-backed requests only, and wiped on lock,
- * on background and at launch.
- */
+/** Acrobat-style reading view: dark top bar, white page, dark tool sheet and a gradient button. */
 @Composable
 fun PdfJsViewer(
     item: VaultItem,
     decryptToCache: suspend (VaultItem) -> File,
     modifier: Modifier = Modifier,
+    onClose: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val docHandler = remember(item.id) { PdfDocHandler() }
@@ -91,6 +123,8 @@ fun PdfJsViewer(
     var ready by remember(item.id) { mutableStateOf(false) }
     var failed by remember(item.id) { mutableStateOf(false) }
     var layout by rememberSaveable(item.id) { mutableStateOf(PdfLayout.CONTINUOUS) }
+    var tool by rememberSaveable(item.id) { mutableStateOf(PdfTool.NONE) }
+    var showMore by remember(item.id) { mutableStateOf(false) }
     val viewHolder = remember(item.id) { arrayOfNulls<WebView>(1) }
 
     LaunchedEffect(item.id) {
@@ -100,100 +134,258 @@ fun PdfJsViewer(
         ready = file != null
     }
 
-    // Keep clear of the status bar and the navigation bar, so the viewer's toolbar and the
-    // layout switcher are never drawn underneath them.
     Box(
         modifier
             .fillMaxSize()
-            .background(Color(0xFF202020))
+            .background(BarColor)
             .windowInsetsPadding(WindowInsets.systemBars),
     ) {
-        when {
-            failed -> Text(
-                text = stringResourceSafe(R.string.pdf_failed),
-                color = Color.White,
-                modifier = Modifier.padding(32.dp).align(Alignment.Center),
-            )
-
-            !ready -> CircularProgressIndicator(
-                color = Color.White,
-                modifier = Modifier.align(Alignment.Center),
-            )
-
-            else -> AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.javaScriptEnabled = true
-                        settings.allowFileAccess = false
-                        settings.allowContentAccess = false
-                        settings.builtInZoomControls = false
-                        // Show what the PDF engine reports, so a blank page can be diagnosed from Logcat.
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                                Log.w(
-                                    "FileWallPdf",
-                                    "${message.messageLevel()} ${message.message()} " +
-                                        "(${message.sourceId()}:${message.lineNumber()})",
-                                )
-                                return true
-                            }
-                        }
-                        webViewClient = object : WebViewClientCompat() {
-                            override fun shouldInterceptRequest(
-                                view: WebView,
-                                request: WebResourceRequest,
-                            ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
-
-                            override fun onPageFinished(view: WebView, url: String?) {
-                                view.evaluateJavascript(HIDE_EXPORT_CSS, null)
-                                (view.tag as? PdfLayout)?.let { view.evaluateJavascript(layoutScript(it), null) }
-                                // The viewer may finish starting before it has its final size.
-                                view.postDelayed({ view.evaluateJavascript(REFIT_JS, null) }, 400)
-                            }
-                        }
-                        // Re-fit whenever the viewer's size actually changes.
-                        addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
-                            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
-                                (v as WebView).evaluateJavascript(REFIT_JS, null)
-                            }
-                        }
-                        viewHolder[0] = this
-                    }
-                },
-                update = { view ->
-                    view.tag = layout
-                    if (view.url == null) view.loadUrl(VIEWER_URL)
-                },
-            )
-        }
-
-        // Layout switcher: single page, two pages, continuous. Centred at the bottom, clear of
-        // the viewer's own corner buttons.
-        if (ready && !failed) {
+        Column(Modifier.fillMaxSize()) {
+            // Top bar: back, highlight, and more.
             Row(
                 Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 12.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xCC000000))
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LayoutChoice(Icons.Filled.Description, "Single page", layout == PdfLayout.SINGLE) {
-                    layout = PdfLayout.SINGLE
-                    viewHolder[0]?.evaluateJavascript(layoutScript(PdfLayout.SINGLE), null)
+                BarIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClose)
+                Spacer(Modifier.weight(1f))
+                BarIcon(
+                    Icons.Filled.Highlight,
+                    "Highlight",
+                    tint = if (tool == PdfTool.HIGHLIGHT) ToolActiveColor else IconColor,
+                ) { tool = toggle(tool, PdfTool.HIGHLIGHT, viewHolder[0]) }
+                Box {
+                    BarIcon(Icons.Filled.MoreVert, "More") { showMore = true }
+                    MoreMenu(
+                        expanded = showMore,
+                        layout = layout,
+                        onDismiss = { showMore = false },
+                        onSelect = { selected ->
+                            layout = selected
+                            viewHolder[0]?.evaluateJavascript(layoutScript(selected), null)
+                            showMore = false
+                        },
+                    )
                 }
-                LayoutChoice(Icons.Filled.MenuBook, "Two pages", layout == PdfLayout.TWO_PAGE) {
-                    layout = PdfLayout.TWO_PAGE
-                    viewHolder[0]?.evaluateJavascript(layoutScript(PdfLayout.TWO_PAGE), null)
+            }
+
+            // Document: a white page area, with the PDF engine inside.
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(PageBackground),
+            ) {
+                when {
+                    failed -> Text(
+                        text = "This PDF could not be opened",
+                        color = Color.Black,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(32.dp).align(Alignment.Center),
+                    )
+
+                    !ready -> CircularProgressIndicator(
+                        color = Color(0xFF5F6368),
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+
+                    else -> AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.javaScriptEnabled = true
+                                settings.allowFileAccess = false
+                                settings.allowContentAccess = false
+                                settings.builtInZoomControls = false
+                                webChromeClient = object : WebChromeClient() {
+                                    override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                                        Log.w(
+                                            "FileWallPdf",
+                                            "${message.messageLevel()} ${message.message()} " +
+                                                "(${message.sourceId()}:${message.lineNumber()})",
+                                        )
+                                        return true
+                                    }
+                                }
+                                webViewClient = object : WebViewClientCompat() {
+                                    override fun shouldInterceptRequest(
+                                        view: WebView,
+                                        request: WebResourceRequest,
+                                    ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
+
+                                    override fun onPageFinished(view: WebView, url: String?) {
+                                        view.evaluateJavascript(HIDE_CHROME_CSS, null)
+                                        (view.tag as? PdfLayout)?.let { view.evaluateJavascript(layoutScript(it), null) }
+                                        view.postDelayed({ view.evaluateJavascript(REFIT_JS, null) }, 400)
+                                    }
+                                }
+                                addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                                    if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                                        (v as WebView).evaluateJavascript(REFIT_JS, null)
+                                    }
+                                }
+                                viewHolder[0] = this
+                            }
+                        },
+                        update = { view ->
+                            view.tag = layout
+                            if (view.url == null) view.loadUrl(VIEWER_URL)
+                        },
+                    )
                 }
-                LayoutChoice(Icons.Filled.ViewAgenda, "Continuous scroll", layout == PdfLayout.CONTINUOUS) {
-                    layout = PdfLayout.CONTINUOUS
-                    viewHolder[0]?.evaluateJavascript(layoutScript(PdfLayout.CONTINUOUS), null)
+
+                // Gradient action button, as in Acrobat: it opens the tool sheet's first action.
+                if (ready && !failed) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 12.dp)
+                            .size(56.dp)
+                            .shadow(6.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFFE8337A), Color(0xFF7B2FF7)),
+                                ),
+                            )
+                            .clickable {
+                                tool = toggle(tool, PdfTool.DRAW, viewHolder[0])
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Filled.Draw,
+                            contentDescription = "Draw",
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+            }
+
+            // Bottom tool sheet: the same six actions as Acrobat.
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(SheetColor)
+                    .padding(top = 10.dp, bottom = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    Modifier
+                        .size(width = 40.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0xFF5F6368)),
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    SheetTool(Icons.Filled.Edit, "Edit PDF", enabled = false) {}
+                    SheetTool(Icons.Filled.ChatBubbleOutline, "Comment", tool == PdfTool.COMMENT) {
+                        tool = toggle(tool, PdfTool.COMMENT, viewHolder[0])
+                    }
+                    SheetTool(Icons.Filled.Highlight, "Highlight", tool == PdfTool.HIGHLIGHT) {
+                        tool = toggle(tool, PdfTool.HIGHLIGHT, viewHolder[0])
+                    }
+                    SheetTool(Icons.Filled.Draw, "Draw", tool == PdfTool.DRAW) {
+                        tool = toggle(tool, PdfTool.DRAW, viewHolder[0])
+                    }
+                    SheetTool(Icons.Filled.DriveFileRenameOutline, "Fill & Sign", tool == PdfTool.FILL_SIGN) {
+                        tool = toggle(tool, PdfTool.FILL_SIGN, viewHolder[0])
+                    }
+                    SheetTool(Icons.Filled.Apps, "More tools", selected = false) { showMore = true }
                 }
             }
         }
+    }
+}
+
+/** A tool on or off. Turning a tool off returns the viewer to plain reading. */
+private fun toggle(current: PdfTool, wanted: PdfTool, view: WebView?): PdfTool {
+    val next = if (current == wanted) PdfTool.NONE else wanted
+    val mode = when (next) {
+        PdfTool.NONE -> MODE_NONE
+        PdfTool.COMMENT -> MODE_COMMENT
+        PdfTool.HIGHLIGHT -> MODE_HIGHLIGHT
+        PdfTool.DRAW -> MODE_DRAW
+        PdfTool.FILL_SIGN -> MODE_FILL_SIGN
+    }
+    view?.evaluateJavascript(editorModeScript(mode), null)
+    return next
+}
+
+private enum class PdfTool { NONE, COMMENT, HIGHLIGHT, DRAW, FILL_SIGN }
+
+@Composable
+private fun BarIcon(
+    icon: ImageVector,
+    description: String,
+    tint: Color = IconColor,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(icon, contentDescription = description, tint = tint)
+    }
+}
+
+@Composable
+private fun SheetTool(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean = false,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    val tint = when {
+        !enabled -> DimIconColor
+        selected -> ToolActiveColor
+        else -> IconColor
+    }
+    Column(
+        Modifier
+            .width(64.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label,
+            color = tint,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun MoreMenu(
+    expanded: Boolean,
+    layout: PdfLayout,
+    onDismiss: () -> Unit,
+    onSelect: (PdfLayout) -> Unit,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = { Text(if (layout == PdfLayout.SINGLE) "✓  Single page" else "    Single page") },
+            onClick = { onSelect(PdfLayout.SINGLE) },
+        )
+        DropdownMenuItem(
+            text = { Text(if (layout == PdfLayout.TWO_PAGE) "✓  Two pages" else "    Two pages") },
+            onClick = { onSelect(PdfLayout.TWO_PAGE) },
+        )
+        DropdownMenuItem(
+            text = { Text(if (layout == PdfLayout.CONTINUOUS) "✓  Continuous scroll" else "    Continuous scroll") },
+            onClick = { onSelect(PdfLayout.CONTINUOUS) },
+        )
     }
 }
 
@@ -206,27 +398,16 @@ private fun layoutScript(layout: PdfLayout): String {
         PdfLayout.TWO_PAGE -> { spread = 1; scroll = 0 }
         PdfLayout.CONTINUOUS -> { spread = 0; scroll = 0 }
     }
-    // The viewer finishes starting up after the page loads, so retry briefly until it is ready.
     return "(function apply(n){var a=window.PDFViewerApplication;" +
         "if(!a||!a.pdfViewer){if(n<60)setTimeout(function(){apply(n+1)},150);return;}" +
         "a.pdfViewer.spreadMode=$spread;a.pdfViewer.scrollMode=$scroll;})(0);"
 }
 
-@Composable
-private fun LayoutChoice(
-    icon: ImageVector,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    IconButton(onClick = onClick) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = if (selected) MaterialTheme.colorScheme.primary else Color.White,
-        )
-    }
-}
+/** Switches the PDF engine's editing mode (comment, highlight, draw, and so on). */
+private fun editorModeScript(mode: Int): String =
+    "(function apply(n){var a=window.PDFViewerApplication;" +
+        "if(!a||!a.eventBus){if(n<60)setTimeout(function(){apply(n+1)},150);return;}" +
+        "a.eventBus.dispatch('switchannotationeditormode',{source:window,mode:$mode});})(0);"
 
 /** Serves the bundled viewer and engine from the app's assets, with correct MIME types. */
 private class PdfJsAssetHandler(private val context: Context) : WebViewAssetLoader.PathHandler {
@@ -259,3 +440,5 @@ private class PdfDocHandler : WebViewAssetLoader.PathHandler {
         return runCatching { WebResourceResponse("application/pdf", null, FileInputStream(f)) }.getOrNull()
     }
 }
+
+enum class PdfLayout { SINGLE, TWO_PAGE, CONTINUOUS }
