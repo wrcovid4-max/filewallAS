@@ -1,5 +1,6 @@
 package com.filewall.ui.security
 
+import com.filewall.ui.common.InfoIcon
 import com.filewall.ui.common.DriveLogo
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Switch
@@ -160,6 +161,17 @@ fun SecurityScreen(
         item { SecurityHero() }
 
         item {
+            Box {
+                StorageBreakdownCard(state.storage)
+                InfoIcon(
+                    "Storage Breakdown",
+                    "How much of your phone the vault uses, and how that splits between photos, videos and documents. Nothing here is uploaded.",
+                    Modifier.align(Alignment.TopEnd).padding(10.dp),
+                )
+            }
+        }
+
+        item {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -181,11 +193,18 @@ fun SecurityScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                    Text(
-                        text = "Let Ask AI see my files",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Let Ask AI see my files",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        InfoIcon(
+                            "Let Ask AI see my files",
+                            "When on, Gemini can read your visible files when you ask a question, without asking each time. Hidden files always ask first. Turn it off to be asked again.",
+                            Modifier.padding(start = 4.dp),
+                        )
+                    }
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Gemini can read your visible files without asking each time. Hidden files always ask first.",
@@ -228,7 +247,6 @@ fun SecurityScreen(
                 }
             }
         }
-        item { StorageBreakdownCard(state.storage) }
 
         item {
             SectionCard {
