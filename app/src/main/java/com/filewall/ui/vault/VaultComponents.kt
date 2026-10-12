@@ -2,6 +2,9 @@
 
 package com.filewall.ui.vault
 
+import androidx.compose.runtime.collectAsState
+import com.filewall.ui.common.DriveLogo
+import com.filewall.data.drive.DriveMarks
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -527,6 +530,8 @@ fun FileGridTile(
     menuActions: List<TileAction> = emptyList(),
     previewDocs: Boolean = true,
 ) {
+    val driveIds by DriveMarks.ids.collectAsState()
+    val onDrive = item.id in driveIds
     Column(
         modifier = modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -589,7 +594,13 @@ fun FileGridTile(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(6.dp))
-        TypeBadge(item.category)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TypeBadge(item.category)
+            if (onDrive) {
+                Spacer(Modifier.width(6.dp))
+                DriveLogo(iconSize = 14.dp)
+            }
+        }
     }
 }
 
@@ -606,6 +617,8 @@ fun FileListRow(
     menuActions: List<TileAction> = emptyList(),
     previewDocs: Boolean = true,
 ) {
+    val driveIds by DriveMarks.ids.collectAsState()
+    val onDrive = item.id in driveIds
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -648,6 +661,10 @@ fun FileListRow(
                 },
             )
         } else {
+            if (onDrive) {
+                DriveLogo(iconSize = 14.dp)
+                Spacer(Modifier.width(6.dp))
+            }
             TypeBadge(item.category)
             if (menuActions.isNotEmpty()) {
                 Spacer(Modifier.width(4.dp))

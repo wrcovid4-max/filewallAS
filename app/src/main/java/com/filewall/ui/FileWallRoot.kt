@@ -472,5 +472,10 @@ private fun exportWithDefault(
     } else {
         null
     }
-    if (target != null) toUri(target) else askWhere()
+    if (target != null) {
+        com.filewall.data.drive.DriveMarks.add(context, item.id)
+        toUri(target)
+    } else {
+        askWhere()
+    }
 }
