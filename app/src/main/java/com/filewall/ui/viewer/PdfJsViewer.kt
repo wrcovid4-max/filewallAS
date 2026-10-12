@@ -1,5 +1,8 @@
 package com.filewall.ui.viewer
 
+import android.webkit.WebChromeClient
+import android.webkit.ConsoleMessage
+import android.util.Log
 import android.content.Context
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -125,6 +128,17 @@ fun PdfJsViewer(
                         settings.allowFileAccess = false
                         settings.allowContentAccess = false
                         settings.builtInZoomControls = false
+                        // Show what the PDF engine reports, so a blank page can be diagnosed from Logcat.
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                                Log.w(
+                                    "FileWallPdf",
+                                    "${message.messageLevel()} ${message.message()} " +
+                                        "(${message.sourceId()}:${message.lineNumber()})",
+                                )
+                                return true
+                            }
+                        }
                         webViewClient = object : WebViewClientCompat() {
                             override fun shouldInterceptRequest(
                                 view: WebView,
