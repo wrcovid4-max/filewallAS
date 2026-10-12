@@ -1,5 +1,6 @@
 package com.filewall.ui
 
+import androidx.compose.ui.unit.dp
 import com.filewall.ui.ai.AskAiFab
 import com.filewall.ui.ai.AiChatSheet
 import androidx.compose.foundation.layout.fillMaxWidth
