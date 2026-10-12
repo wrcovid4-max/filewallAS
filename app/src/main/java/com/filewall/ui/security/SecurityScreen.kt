@@ -131,6 +131,16 @@ fun SecurityScreen(
         ActivityResultContracts.CreateDocument(VaultArchive.MIME_TYPE),
     ) { uri -> uri?.let { prompt = PassphrasePrompt.ExportLocal(it) } }
 
+    val driveContext = androidx.compose.ui.platform.LocalContext.current
+    val driveFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            com.filewall.data.drive.DriveFolder.save(driveContext, uri)
+            android.widget.Toast.makeText(driveContext, "Drive folder chosen", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val restoreLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let { prompt = PassphrasePrompt.RestoreLocal(it) } }
@@ -157,6 +167,36 @@ fun SecurityScreen(
             }
         }
 
+        item {
+            val chosen = com.filewall.data.drive.DriveFolder.get(driveContext) != null
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(18.dp),
+            ) {
+                Text(
+                    text = "Google Drive folder",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (chosen) {
+                        "Exports go straight to this folder as plain copies, so they open anywhere. Hidden files still ask first."
+                    } else {
+                        "Choose a folder in Google Drive once. Exports go there without asking each time. No Google setup needed."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = { driveFolderLauncher.launch(null) }) {
+                    Text(if (chosen) "Change folder" else "Choose folder")
+                }
+            }
+        }
         item { StorageBreakdownCard(state.storage) }
 
         item {

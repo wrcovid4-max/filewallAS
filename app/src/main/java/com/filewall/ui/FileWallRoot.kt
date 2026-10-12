@@ -294,7 +294,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 )
             },
             onClose = { viewerOpen = false },
-            onExport = { exportLauncher.launch(item.name) },
+            onExport = { exportWithDefault(context, item, { uri -> vaultViewModel.export(item, uri) }, { exportLauncher.launch(item.name) }) },
             onMove = { viewerDialog = ViewerDialog.Move },
             onRename = { viewerDialog = ViewerDialog.Rename },
             onDelete = { viewerDialog = ViewerDialog.Delete },
@@ -456,3 +456,21 @@ private suspend fun summarizeVault(container: AppContainer): String =
         .filter { it.deletedAt == 0L && !it.hidden }
         .take(300)
         .joinToString("\n") { "${it.name} | ${it.category.name} | ${it.sizeBytes} bytes" }
+
+/**
+ * Export goes straight to the chosen Drive folder when one is set. Hidden files always ask
+ * where to save, so they never reach Drive without the user choosing it.
+ */
+private fun exportWithDefault(
+    context: android.content.Context,
+    item: VaultItem,
+    toUri: (android.net.Uri) -> Unit,
+    askWhere: () -> Unit,
+) {
+    val target = if (!item.hidden && com.filewall.data.drive.DriveFolder.get(context) != null) {
+        runCatching { com.filewall.data.drive.DriveFolder.createTarget(context, item.name) }.getOrNull()
+    } else {
+        null
+    }
+    if (target != null) toUri(target) else askWhere()
+}
