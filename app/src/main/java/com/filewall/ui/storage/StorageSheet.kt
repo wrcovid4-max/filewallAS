@@ -1,5 +1,7 @@
 package com.filewall.ui.storage
 
+import com.filewall.ui.common.InfoIcon
+import androidx.compose.ui.Alignment
 import android.os.Environment
 import android.os.StatFs
 import androidx.compose.foundation.layout.Arrangement
@@ -43,11 +45,18 @@ fun StorageSheet(breakdown: StorageBreakdown, onDismiss: () -> Unit) {
                 .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            Text(
-                text = "Storage",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Storage",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                InfoIcon(
+                    "Storage",
+                    "Shows how full your phone is, and how your vault's space splits by type. Nothing here is uploaded.",
+                    Modifier.padding(start = 4.dp),
+                )
+            }
 
             // Phone storage: the whole device, the same figure the system settings show.
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

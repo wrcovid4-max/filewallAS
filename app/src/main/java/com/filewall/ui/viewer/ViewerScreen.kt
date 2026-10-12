@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import com.filewall.ui.common.InfoIcon
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -387,11 +388,18 @@ private fun ItemDetailsCard(
             }
             Spacer(Modifier.width(14.dp))
             Column {
-                Text(
-                    "Encrypted on this device",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Encrypted on this device",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    InfoIcon(
+                        "Encrypted on this device",
+                        "Your files are encrypted with a key kept in this phone's secure hardware. They are not uploaded unless you back up, export or share them.",
+                        Modifier.padding(start = 4.dp),
+                    )
+                }
                 Text(
                     "Only you can open this file",
                     style = MaterialTheme.typography.bodyMedium,

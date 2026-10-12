@@ -236,11 +236,16 @@ fun SettingSwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f).padding(end = 16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.5f),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.5f),
+                )
+                if (description != null) {
+                    InfoIcon(title, description, Modifier.padding(start = 4.dp))
+                }
+            }
             if (description != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(
