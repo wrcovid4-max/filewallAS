@@ -1,5 +1,10 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.activity.compose.BackHandler
@@ -519,6 +524,7 @@ fun PdfJsViewer(
                         total = pageCount,
                         onPrevious = { goToPage(currentPage - 1) },
                         onNext = { goToPage(currentPage + 1) },
+                        onGoTo = { page -> goToPage(page) },
                         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
                     )
                 }
@@ -604,8 +610,19 @@ private fun PageNumberPill(
     total: Int,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onGoTo: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var editing by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(editing) {
+        if (editing) focus.requestFocus()
+    }
+    fun commit() {
+        draft.toIntOrNull()?.let(onGoTo)
+        editing = false
+    }
     Row(
         modifier
             .clip(RoundedCornerShape(50))
@@ -616,12 +633,35 @@ private fun PageNumberPill(
         IconButton(onClick = onPrevious, enabled = current > 1, modifier = Modifier.size(36.dp)) {
             Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Previous page", tint = Color.White)
         }
-        Text(
-            text = "$current / $total",
-            color = Color.White,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = 10.dp),
-        )
+        if (editing) {
+            // Type a page number and press Done to go there.
+            BasicTextField(
+                value = draft,
+                onValueChange = { draft = it.filter(Char::isDigit).take(4) },
+                singleLine = true,
+                textStyle = TextStyle(color = Color.White, fontSize = 15.sp, textAlign = TextAlign.Center),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { commit() }),
+                cursorBrush = SolidColor(Color.White),
+                modifier = Modifier
+                    .width(64.dp)
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .focusRequester(focus)
+                    .onFocusChanged { if (!it.isFocused) editing = false },
+            )
+        } else {
+            Text(
+                text = "$current / $total",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier
+                    .clickable {
+                        draft = ""
+                        editing = true
+                    }
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
         IconButton(onClick = onNext, enabled = current < total, modifier = Modifier.size(36.dp)) {
             Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Next page", tint = Color.White)
         }
