@@ -292,7 +292,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 }.getOrNull()
             },
             videoPlayer = { playerModifier ->
-                VaultVideoPlayer(
+                com.filewall.ui.viewer.VaultMediaPlayer(
                     item = item,
                     repository = container.repository,
                     modifier = playerModifier,

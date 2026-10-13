@@ -238,7 +238,7 @@ fun ViewerScreen(
                             ),
                     )
 
-                    item.category == FileCategory.VIDEO -> videoPlayer(
+                    (item.category == FileCategory.VIDEO || item.isMedia) -> videoPlayer(
                         Modifier
                             .fillMaxSize()
                             .graphicsLayer(
