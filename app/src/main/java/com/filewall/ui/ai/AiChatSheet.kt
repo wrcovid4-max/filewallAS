@@ -1,5 +1,14 @@
 package com.filewall.ui.ai
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -126,6 +135,12 @@ fun AiChatSheet(
     var showHistory by remember { mutableStateOf(false) }
     var historyTick by remember { mutableStateOf(0) }
     val listState = rememberLazyListState()
+    // Where the screen is while it is being dragged, and how far it has slid in on open.
+    val dragOffset = remember { Animatable(0f) }
+    val entered = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        entered.animateTo(1f, tween(durationMillis = 320, easing = FastOutSlowInEasing))
+    }
 
     fun send(raw: String) {
         val question = raw.trim()
@@ -208,14 +223,22 @@ fun AiChatSheet(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Surface(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationY = dragOffset.value + (1f - entered.value) * 120.dp.toPx()
+                    alpha = entered.value
+                },
+            color = MaterialTheme.colorScheme.background,
+        ) {
         Column(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.systemBars)
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
-            DismissGrab(onDismiss = onDismiss)
+            DismissGrab(offset = dragOffset, onDismiss = onDismiss)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -529,20 +552,35 @@ private fun ConsentCard(rememberChoice: Boolean, onAllow: () -> Unit, onNotNow: 
     }
 }
 
-/** A grab bar at the top centre. Drag it down to close the Ask AI screen. */
+/**
+ * A grab bar at the top centre. The screen follows the finger as it is dragged down. Released
+ * far enough, it slides away and closes; released short of that, it springs back.
+ */
 @Composable
-private fun DismissGrab(onDismiss: () -> Unit) {
-    val threshold = with(LocalDensity.current) { 80.dp.toPx() }
-    var drag by remember { mutableStateOf(0f) }
+private fun DismissGrab(offset: Animatable<Float, AnimationVector1D>, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val threshold = with(LocalDensity.current) { 110.dp.toPx() }
+    val slideAway = with(LocalDensity.current) { 900.dp.toPx() }
     Box(
         Modifier
             .fillMaxWidth()
             .height(32.dp)
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
-                    onDragStart = { drag = 0f },
-                    onVerticalDrag = { _, amount -> drag += amount },
-                    onDragEnd = { if (drag > threshold) onDismiss() },
+                    onDragStart = {},
+                    onVerticalDrag = { _, amount ->
+                        scope.launch { offset.snapTo((offset.value + amount).coerceAtLeast(0f)) }
+                    },
+                    onDragEnd = {
+                        scope.launch {
+                            if (offset.value > threshold) {
+                                offset.animateTo(slideAway, tween(durationMillis = 220, easing = FastOutLinearInEasing))
+                                onDismiss()
+                            } else {
+                                offset.animateTo(0f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
+                            }
+                        }
+                    },
                 )
             },
         contentAlignment = Alignment.Center,

@@ -1,5 +1,11 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.AnimatedVisibility
 import com.filewall.ui.ai.AskAiFab
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.CountDownLatch
@@ -263,7 +269,11 @@ fun PdfJsViewer(
         }
         Column(Modifier.fillMaxSize()) {
             // Top bar.
-            if (showBars) Row(
+            AnimatedVisibility(
+                visible = showBars,
+                enter = slideInVertically(animationSpec = tween(260), initialOffsetY = { -it }) + fadeIn(tween(220)),
+                exit = slideOutVertically(animationSpec = tween(220), targetOffsetY = { -it }) + fadeOut(tween(180)),
+            ) { Row(
                 Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -337,7 +347,7 @@ fun PdfJsViewer(
                         },
                     )
                 }
-            }
+            } }
 
             // Search bar, shown under the top bar when search is on.
             if (searchOpen && showBars) {
@@ -506,7 +516,11 @@ fun PdfJsViewer(
             }
 
             // Bottom tool sheet: the Acrobat actions, minus Edit PDF.
-            if (showBars) Column(
+            AnimatedVisibility(
+                visible = showBars,
+                enter = slideInVertically(animationSpec = tween(260), initialOffsetY = { it }) + fadeIn(tween(220)),
+                exit = slideOutVertically(animationSpec = tween(220), targetOffsetY = { it }) + fadeOut(tween(180)),
+            ) { Column(
                 Modifier
                     .fillMaxWidth()
                     .background(BarColor)
@@ -533,7 +547,7 @@ fun PdfJsViewer(
                     }
                     SheetTool(Icons.Filled.Apps, "More tools", selected = false) { showMore = true }
                 }
-            }
+            } }
             if (fullScreen && !barsVisible) GrabHandle(fullScreen = true, onChange = onFullScreenChange)
         }
     }
