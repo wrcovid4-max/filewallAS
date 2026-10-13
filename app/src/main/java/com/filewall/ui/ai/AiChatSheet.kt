@@ -111,6 +111,7 @@ fun AiChatSheet(
     consentKey: String?,
     loadContext: suspend () -> String,
     onDismiss: () -> Unit,
+    onGoToPage: ((Int) -> Unit)? = null,
     suggestions: List<String> = listOf(
         "What is this about?",
         "Summarise the key points",
@@ -145,6 +146,13 @@ fun AiChatSheet(
     fun send(raw: String) {
         val question = raw.trim()
         if (question.isEmpty() || sending) return
+        // "page 5" or "go to page 5" opens that page straight away.
+        val explicitPage = Regex("""(?i)(?:go\s+to\s+|open\s+|show\s+)?page\s+(\d+)""").find(question)
+        if (explicitPage != null && onGoToPage != null) {
+            onGoToPage(explicitPage.groupValues[1].toInt())
+            onDismiss()
+            return
+        }
         val history = turns.toList()
         turns.add(GeminiClient.Turn(true, question))
         input = ""
@@ -158,7 +166,9 @@ fun AiChatSheet(
                 ERROR_TEXT
             }
             Log.i(AI_TAG, "ai: answered ${answer.length} chars")
-            turns.add(GeminiClient.Turn(false, answer))
+            val pageLine = Regex("PAGE:\\s*(\\d+)\\s*\$").find(answer)
+            val shown = if (pageLine != null) answer.removeRange(pageLine.range).trimEnd() else answer
+            turns.add(GeminiClient.Turn(false, shown, pageLine?.groupValues?.get(1)?.toIntOrNull()))
             if (consentKey != null) {
                 ChatHistory.save(
                     context,
@@ -345,7 +355,7 @@ fun AiChatSheet(
                             }
                         }
                     }
-                    items(turns) { turn -> Bubble(turn) }
+                    items(turns) { turn -> Bubble(turn, onGoToPage) }
                     if (sending) {
                         item {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -497,10 +507,10 @@ private fun formatWhen(millis: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(millis))
 
 @Composable
-private fun Bubble(turn: GeminiClient.Turn) {
-    Row(
+private fun Bubble(turn: GeminiClient.Turn, onGoToPage: ((Int) -> Unit)?) {
+    Column(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = if (turn.fromUser) Arrangement.End else Arrangement.Start,
+        horizontalAlignment = if (turn.fromUser) Alignment.End else Alignment.Start,
     ) {
         Text(
             text = turn.text,
@@ -514,6 +524,14 @@ private fun Bubble(turn: GeminiClient.Turn) {
                 )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         )
+        val page = turn.page
+        if (page != null && onGoToPage != null) {
+            AssistChip(
+                onClick = { onGoToPage(page) },
+                label = { Text("Go to page $page") },
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
     }
 }
 

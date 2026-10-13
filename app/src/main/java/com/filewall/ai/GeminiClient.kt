@@ -15,11 +15,13 @@ import java.net.URL
 object GeminiClient {
 
     /** One message in the chat. */
-    data class Turn(val fromUser: Boolean, val text: String)
+    data class Turn(val fromUser: Boolean, val text: String, val page: Int? = null)
 
     private const val SYSTEM =
         "You help the user with their own files. When context is given, answer from it and say " +
-            "clearly when the answer is not in it. Keep answers short and plain."
+            "clearly when the answer is not in it. Keep answers short and plain. The document text is split " +
+            "into pages marked '=== Page N ===='. When your answer comes from one specific page, end your reply " +
+            "with a final line exactly: PAGE: N, where N is that page number. Otherwise write no PAGE line."
 
     private val MODELS = listOf("gemini-3.8-flash", "gemini-3.6-flash")
 

@@ -1,5 +1,8 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
@@ -116,6 +119,13 @@ private const val VIEWER_URL = "$ORIGIN/assets/web/viewer.html?file=$ORIGIN/doc/
 // One log tag for everything that happens in the viewer: filter Logcat by FileWallDoc.
 private const val DOC_TAG = "FileWallDoc"
 
+// Reads the current page number and the page count, as "current/total".
+private const val PAGE_STATE_JS =
+    "(function(){var a=window.PDFViewerApplication;return a&&a.pdfViewer?(a.page+'/'+a.pagesCount):'';})();"
+
+private fun goToPageScript(page: Int): String =
+    "(function(){var a=window.PDFViewerApplication;if(a&&a.pdfViewer){a.page=$page;}})();"
+
 // Acrobat-style colours.
 private val BarColor = Color(0xFF1F1F1F)
 private val SearchColor = Color(0xFF2B2B2B)
@@ -208,6 +218,29 @@ fun PdfJsViewer(
     var readAloud by remember(item.id) { mutableStateOf(false) }
     var saving by remember(item.id) { mutableStateOf(false) }
     val viewHolder = remember(item.id) { arrayOfNulls<WebView>(1) }
+    var currentPage by remember(item.id) { mutableStateOf(0) }
+    var pageCount by remember(item.id) { mutableStateOf(0) }
+    fun goToPage(page: Int) {
+        val target = page.coerceIn(1, pageCount.coerceAtLeast(1))
+        currentPage = target
+        viewHolder[0]?.evaluateJavascript(goToPageScript(target), null)
+    }
+    // System back: leave full screen first, then close, as the back button does.
+    BackHandler(enabled = true) { if (fullScreen) onFullScreenChange(false) else onClose() }
+    LaunchedEffect(ready) {
+        while (ready) {
+            val raw = viewHolder[0]?.evalString(PAGE_STATE_JS)
+            if (raw != null) {
+                val value = JSONTokener(raw).nextValue()
+                if (value is String && value.contains('/')) {
+                    val parts = value.split('/').map { it.toIntOrNull() ?: 0 }
+                    currentPage = parts[0]
+                    pageCount = parts[1]
+                }
+            }
+            delay(400)
+        }
+    }
     val speechHolder = remember(item.id) { arrayOfNulls<TextToSpeech>(1) }
 
     LaunchedEffect(item.id) {
@@ -231,7 +264,7 @@ fun PdfJsViewer(
         speechHolder[0] = engine
         val pages = webView.readPageTexts()
         Log.i(DOC_TAG, "read aloud: ${pages.size} page(s) with text")
-        if (pages.isEmpty()) {
+        if (pages.all { it.isBlank() }) {
             readAloud = false
             Toast.makeText(context, "This PDF has no text to read", Toast.LENGTH_SHORT).show()
             return@LaunchedEffect
@@ -263,7 +296,8 @@ fun PdfJsViewer(
                 title = "Ask AI",
                 subtitle = item.name,
                 consentKey = if (item.hidden) null else "doc-${item.id}",
-                loadContext = { viewHolder[0]?.readPageTexts()?.joinToString("\n\n").orEmpty() },
+                onGoToPage = { page -> goToPage(page) },
+                loadContext = { viewHolder[0]?.readPageTexts()?.mapIndexed { i, t -> "=== Page ${i + 1} ===\n$t" }?.joinToString("\n\n").orEmpty() },
                 onDismiss = { showAi = false },
             )
         }
@@ -478,6 +512,17 @@ fun PdfJsViewer(
                     )
                 }
 
+                // Page number, shown in full screen.
+                if (fullScreen && ready && !failed && pageCount > 0) {
+                    PageNumberPill(
+                        current = currentPage,
+                        total = pageCount,
+                        onPrevious = { goToPage(currentPage - 1) },
+                        onNext = { goToPage(currentPage + 1) },
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+                    )
+                }
+
                 // Ask AI sphere, bottom-left of the page, clear of the Draw button.
                 if (ready && !failed) {
                     AskAiFab(
@@ -549,6 +594,36 @@ fun PdfJsViewer(
                 }
             } }
             if (fullScreen && !barsVisible) GrabHandle(fullScreen = true, onChange = onFullScreenChange)
+        }
+    }
+}
+
+@Composable
+private fun PageNumberPill(
+    current: Int,
+    total: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color(0xCC000000))
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onPrevious, enabled = current > 1, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Previous page", tint = Color.White)
+        }
+        Text(
+            text = "$current / $total",
+            color = Color.White,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 10.dp),
+        )
+        IconButton(onClick = onNext, enabled = current < total, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Next page", tint = Color.White)
         }
     }
 }
@@ -708,7 +783,7 @@ private suspend fun WebView.readPageTexts(): List<String> {
         when (value) {
             is String -> {
                 val array = JSONArray(value)
-                return List(array.length()) { array.getString(it).trim() }.filter { it.isNotEmpty() }
+                return List(array.length()) { array.getString(it).trim() }
             }
             JSONObject.NULL, null -> delay(100)
             else -> return emptyList()

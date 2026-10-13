@@ -54,7 +54,7 @@ object ChatHistory {
     private fun toJson(chat: SavedChat): JSONObject {
         val turns = JSONArray()
         chat.turns.forEach { turn ->
-            turns.put(JSONObject().put("fromUser", turn.fromUser).put("text", turn.text))
+            turns.put(JSONObject().put("fromUser", turn.fromUser).put("text", turn.text).apply { turn.page?.let { put("page", it) } })
         }
         return JSONObject()
             .put("id", chat.id)
@@ -73,7 +73,7 @@ object ChatHistory {
             updatedAt = o.getLong("updatedAt"),
             turns = List(turns.length()) { i ->
                 val t = turns.getJSONObject(i)
-                GeminiClient.Turn(t.getBoolean("fromUser"), t.getString("text"))
+                GeminiClient.Turn(t.getBoolean("fromUser"), t.getString("text"), if (t.has("page")) t.getInt("page") else null)
             },
         )
     }
