@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
@@ -236,6 +237,7 @@ fun VaultMediaPlayer(
                     Modifier
                         .fillMaxWidth()
                         .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000))))
+                        .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     val fraction = scrubbing ?: if (duration > 0) position.toFloat() / duration else 0f

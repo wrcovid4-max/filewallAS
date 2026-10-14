@@ -616,6 +616,7 @@ private fun PageNumberPill(
 ) {
     var editing by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
+    var hadFocus by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(editing) {
         if (editing) focus.requestFocus()
@@ -648,7 +649,15 @@ private fun PageNumberPill(
                     .width(64.dp)
                     .padding(horizontal = 6.dp, vertical = 4.dp)
                     .focusRequester(focus)
-                    .onFocusChanged { if (!it.isFocused) editing = false },
+                    .onFocusChanged {
+                        // Only close once the box has actually had focus, not before it gets it.
+                        if (it.isFocused) {
+                            hadFocus = true
+                        } else if (hadFocus) {
+                            hadFocus = false
+                            editing = false
+                        }
+                    },
             )
         } else {
             Text(
@@ -658,6 +667,7 @@ private fun PageNumberPill(
                 modifier = Modifier
                     .clickable {
                         draft = ""
+                        hadFocus = false
                         editing = true
                     }
                     .padding(horizontal = 10.dp, vertical = 4.dp),
