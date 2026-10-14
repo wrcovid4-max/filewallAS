@@ -1,5 +1,6 @@
 package com.filewall.ui.ai
 
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -112,6 +113,7 @@ fun AiChatSheet(
     loadContext: suspend () -> String,
     onDismiss: () -> Unit,
     onGoToPage: ((Int) -> Unit)? = null,
+    documentKey: String? = null,
     suggestions: List<String> = listOf(
         "What is this about?",
         "Summarise the key points",
@@ -134,8 +136,36 @@ fun AiChatSheet(
     var sending by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
+    var docChips by remember { mutableStateOf<List<String>?>(null) }
     var historyTick by remember { mutableStateOf(0) }
     val listState = rememberLazyListState()
+
+    // Documents get three questions written for them. Saved per document, unless the item is hidden.
+    LaunchedEffect(allowed, documentKey) {
+        val key = documentKey ?: return@LaunchedEffect
+        if (!allowed) return@LaunchedEffect
+        val cached = if (consentKey != null) com.filewall.data.ai.DocSuggestions.load(context, key) else null
+        if (cached != null) {
+            docChips = cached
+            return@LaunchedEffect
+        }
+        val text = contextText ?: loadContext().also { contextText = it }
+        if (text.isBlank()) {
+            docChips = emptyList()
+            return@LaunchedEffect
+        }
+        GeminiClient.suggestQuestions(text.take(CONTEXT_LIMIT))
+            .onSuccess { questions ->
+                docChips = questions
+                if (consentKey != null && questions.size == 3) {
+                    com.filewall.data.ai.DocSuggestions.save(context, key, questions)
+                }
+            }
+            .onFailure { e ->
+                Log.e(AI_TAG, "ai: could not write document questions", e)
+                docChips = emptyList()
+            }
+    }
     // Where the screen is while it is being dragged, and how far it has slid in on open.
     val dragOffset = remember { Animatable(0f) }
     val entered = remember { Animatable(0f) }
@@ -246,6 +276,7 @@ fun AiChatSheet(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.systemBars)
+                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
             DismissGrab(offset = dragOffset, onDismiss = onDismiss)
@@ -345,12 +376,21 @@ fun AiChatSheet(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(12.dp))
-                                suggestions.forEach { suggestion ->
-                                    AssistChip(
-                                        onClick = { send(suggestion) },
-                                        label = { Text(suggestion) },
-                                        modifier = Modifier.padding(bottom = 8.dp),
+                                val chips = if (documentKey != null) docChips else suggestions
+                                if (chips == null) {
+                                    Text(
+                                        text = "Preparing questions for this document…",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                } else {
+                                    chips.forEach { suggestion ->
+                                        AssistChip(
+                                            onClick = { send(suggestion) },
+                                            label = { Text(suggestion) },
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                        )
+                                    }
                                 }
                             }
                         }

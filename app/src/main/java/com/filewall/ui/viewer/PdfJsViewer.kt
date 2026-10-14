@@ -303,6 +303,7 @@ fun PdfJsViewer(
                 subtitle = item.name,
                 consentKey = if (item.hidden) null else "doc-${item.id}",
                 onGoToPage = { page -> goToPage(page) },
+                documentKey = item.id,
                 loadContext = { viewHolder[0]?.readPageTexts()?.mapIndexed { i, t -> "=== Page ${i + 1} ===\n$t" }?.joinToString("\n\n").orEmpty() },
                 onDismiss = { showAi = false },
             )

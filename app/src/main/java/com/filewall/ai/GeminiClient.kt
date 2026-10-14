@@ -44,6 +44,20 @@ object GeminiClient {
             }
         }
 
+    /** Three questions a reader would ask about this document, written by Gemini from its text. */
+    suspend fun suggestQuestions(documentText: String): Result<List<String>> =
+        ask(
+            "Read the document in the context and write exactly three short questions a reader would most " +
+                "likely ask about it. One question per line. No numbering and no other text.",
+            documentText,
+            emptyList(),
+        ).map { answer ->
+            answer.lines()
+                .map { it.trim().replace(Regex("""^[\d.\-*)\s]+"""), "") }
+                .filter { it.isNotBlank() }
+                .take(3)
+        }
+
     private fun buildBody(question: String, context: String, history: List<Turn>): JSONObject {
         val contents = JSONArray()
         history.forEach { turn ->
