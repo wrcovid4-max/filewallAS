@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
