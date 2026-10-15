@@ -1,5 +1,6 @@
 package com.filewall.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -41,7 +42,7 @@ fun SplashScreen(modifier: Modifier = Modifier) {
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .size(148.dp)
-                    .clip(RoundedCornerShape(34.dp)),
+                    .clip(RoundedCornerShape(28.dp)).border(0.dp, Color.Transparent),
             )
             Spacer(Modifier.height(22.dp))
             Text(

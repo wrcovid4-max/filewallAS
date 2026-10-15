@@ -373,7 +373,7 @@ fun VaultScreen(
                                 }
                                 SystemFolderRow(
                                     title = stringResourceSafe(R.string.recently_deleted),
-                                    count = state.trashCount,
+                                    count = -1,
                                     icon = Icons.Filled.Delete,
                                     onClick = { viewModel.openSpecial(SpecialView.TRASH) },
                                 )

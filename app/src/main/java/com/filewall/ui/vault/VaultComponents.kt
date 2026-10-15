@@ -760,7 +760,7 @@ fun SystemFolderRow(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
-        Text(
+        if (count >= 0) Text(
             text = "$count",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

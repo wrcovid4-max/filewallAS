@@ -304,7 +304,6 @@ fun VaultMediaPlayer(
                         }) {
                             Icon(Icons.Filled.Forward10, contentDescription = "Forward 10 seconds", tint = Color.White, modifier = Modifier.size(32.dp))
                         }
-                        Spacer(Modifier.width(56.dp))
                     }
                 }
             }

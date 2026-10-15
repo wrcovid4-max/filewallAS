@@ -1,5 +1,6 @@
 package com.filewall.ui.security
 
+import androidx.compose.foundation.BorderStroke
 import com.filewall.ui.common.InfoIcon
 import com.filewall.ui.common.DriveLogo
 import androidx.compose.material3.FilledTonalButton
@@ -161,17 +162,6 @@ fun SecurityScreen(
         item { SecurityHero() }
 
         item {
-            Box {
-                StorageBreakdownCard(state.storage)
-                InfoIcon(
-                    "Storage Breakdown",
-                    "How much of your phone the vault uses, and how that splits between photos, videos and documents. Nothing here is uploaded.",
-                    Modifier.align(Alignment.TopEnd).padding(10.dp),
-                )
-            }
-        }
-
-        item {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -179,6 +169,17 @@ fun SecurityScreen(
                 LinkText(stringResourceSafe(R.string.about_filewall)) {
                     uriHandler.openUri(AppLinks.WEBSITE)
                 }
+            }
+        }
+
+        item {
+            Box {
+                StorageBreakdownCard(state.storage)
+                InfoIcon(
+                    "Storage Breakdown",
+                    "How much of your phone the vault uses, and how that splits between photos, videos and documents. Nothing here is uploaded.",
+                    Modifier.align(Alignment.TopEnd).padding(10.dp),
+                )
             }
         }
 
@@ -537,14 +538,15 @@ fun SecurityScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
 
-                    !state.cloudSignedIn -> Button(
+                    !state.cloudSignedIn -> OutlinedButton(
                         onClick = { cloudSignInLauncher.launch(viewModel.cloudSignInIntent) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.extraLarge,
-                        colors = ButtonDefaults.buttonColors(
+                        colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = Color.White,
                             contentColor = Color(0xFF3C4043),
                         ),
+                        border = if (!androidx.compose.material3.LocalContentColor.current.equals(Color.Unspecified)) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
                     ) {
                         com.filewall.ui.common.GoogleLogo()
                         Spacer(Modifier.width(10.dp))
