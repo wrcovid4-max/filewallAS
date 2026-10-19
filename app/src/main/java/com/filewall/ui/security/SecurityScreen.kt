@@ -1,5 +1,6 @@
 package com.filewall.ui.security
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.BorderStroke
 import com.filewall.ui.common.InfoIcon
 import com.filewall.ui.common.DriveLogo
