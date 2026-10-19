@@ -1,5 +1,8 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.navigationBarsPadding
 import android.content.Context
 import androidx.annotation.OptIn
@@ -125,6 +128,7 @@ fun VaultMediaPlayer(
     var speed by remember(item.id) { mutableFloatStateOf(1f) }
     var controlsVisible by remember(item.id) { mutableStateOf(true) }
     var scrubbing by remember(item.id) { mutableStateOf<Float?>(null) }
+    var videoScale by remember(item.id) { mutableStateOf(1f) }
     var speedMenu by remember(item.id) { mutableStateOf(false) }
     val p = player
 
@@ -185,6 +189,7 @@ fun VaultMediaPlayer(
         modifier
             .fillMaxSize()
             .background(Color.Black)
+            .pointerInput(Unit) { androidx.compose.foundation.gestures.detectTransformGestures { _, _, zoom, _ -> videoScale = (videoScale * zoom).coerceIn(1f, 4f) } }
             .clickable { controlsVisible = !controlsVisible },
         contentAlignment = Alignment.Center,
     ) {
@@ -222,7 +227,7 @@ fun VaultMediaPlayer(
                 },
                 update = { view -> view.player = p },
                 onRelease = { view -> view.player = null },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = videoScale; scaleY = videoScale },
             )
         }
 

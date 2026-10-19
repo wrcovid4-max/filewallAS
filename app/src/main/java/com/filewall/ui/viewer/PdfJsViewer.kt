@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
@@ -588,9 +589,6 @@ fun PdfJsViewer(
                 ) {
                     SheetTool(Icons.Filled.ChatBubbleOutline, "Comment", tool == PdfTool.COMMENT) {
                         tool = toggle(tool, PdfTool.COMMENT, viewHolder[0])
-                    }
-                    SheetTool(Icons.Filled.Highlight, "Highlight", tool == PdfTool.HIGHLIGHT) {
-                        tool = toggle(tool, PdfTool.HIGHLIGHT, viewHolder[0])
                     }
                     SheetTool(Icons.Filled.Draw, "Draw", tool == PdfTool.DRAW) {
                         tool = toggle(tool, PdfTool.DRAW, viewHolder[0])
