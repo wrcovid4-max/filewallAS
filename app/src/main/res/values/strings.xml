@@ -59,7 +59,7 @@
     <string name="link_news">News</string>
     <string name="link_trademarks">Trademarks</string>
     <string name="show_doc_previews">Document Previews</string>
-    <string name="show_doc_previews_desc">Show a cover image on document tiles. Turn off to show a plain document icon instead.</string>
+    <string name="show_doc_previews_desc">Show a cover image on document tiles. Turn off to show a plain document icon instead. Limits: older .doc and .ppt files, and some image formats such as HEIC, may show a plain icon. Other previews are made the first time a file appears, then saved.</string>
     <string name="recently_deleted">Recently Deleted</string>
     <string name="archive">Archive</string>
     <string name="dialog_delete_forever_title">Delete “%1$s” for good?</string>
