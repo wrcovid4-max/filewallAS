@@ -215,6 +215,41 @@ class VaultRepository(
     // ------------------------------------------------------------------ reading
 
     /** Decrypted preview bytes for a tile, or null when the item has no preview. */
+    /** Makes a preview for a file that has none yet (older files, or a failed import), and saves it once. */
+    suspend fun backfillThumbnail(item: VaultItem): ByteArray? = withContext(Dispatchers.IO) {
+        runCatching {
+            if (item.thumbName != null) return@runCatching null
+            val plain = materialisePreview(item)
+            val ext = item.extension.lowercase()
+            val jpeg = ThumbnailFactory.fromFile(plain, item.category, item.mimeType)?.jpeg
+                ?: if (ext in setOf("docx", "pptx", "txt", "md", "csv", "log", "json", "xml", "html", "htm"))
+                    textThumbnail(com.filewall.ui.viewer.extractReadableText(plain, ext))
+                else null
+            if (jpeg == null) return@runCatching null
+            val name = "${item.id}.jpg"
+            File(thumbDir, name).writeBytes(jpeg)
+            dao.upsertItem(item.copy(thumbName = name))
+            jpeg
+        }.getOrNull()
+    }
+
+    /** A page-style preview: the first lines of a document's text on white. */
+    private fun textThumbnail(text: String): ByteArray {
+        val bitmap = android.graphics.Bitmap.createBitmap(480, 640, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.WHITE)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.DKGRAY
+            textSize = 22f
+        }
+        var y = 40f
+        text.lines().filter { it.isNotBlank() }.take(26).forEach { line ->
+            canvas.drawText(line.take(44), 28f, y, paint)
+            y += 28f
+        }
+        return ThumbnailFactory.compress(bitmap)
+    }
+
     suspend fun thumbnailBytes(item: VaultItem): ByteArray? = withContext(Dispatchers.IO) {
         val name = item.thumbName ?: return@withContext null
         val file = File(thumbDir, name)

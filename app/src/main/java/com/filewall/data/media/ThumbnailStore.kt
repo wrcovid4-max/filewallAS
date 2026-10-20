@@ -43,7 +43,7 @@ class ThumbnailStore(private val repository: VaultRepository) {
             gate.withLock {
                 cache.get(item.id)?.let { return@withLock it }
                 permits.withPermit {
-                    val bytes = repository.thumbnailBytes(item) ?: return@withPermit null
+                    val bytes = repository.thumbnailBytes(item) ?: repository.backfillThumbnail(item) ?: return@withPermit null
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.also { cache.put(item.id, it) }
                 }
             }
