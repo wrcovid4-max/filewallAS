@@ -87,6 +87,7 @@ fun ViewerScreen(
     item: VaultItem,
     loadImage: suspend (VaultItem) -> ImageBitmap?,
     videoPlayer: @Composable (Modifier) -> Unit,
+    documentViewer: @Composable (Modifier) -> Unit = {},
     pdfViewer: @Composable (Modifier, Boolean, (Boolean) -> Unit) -> Unit,
     onClose: () -> Unit,
     onExport: () -> Unit,
@@ -248,6 +249,8 @@ fun ViewerScreen(
                                 translationY = offsetY,
                             ),
                     )
+
+                    item.isReadable -> documentViewer(Modifier.fillMaxSize())
 
                     item.isPdf -> pdfViewer(
                         Modifier

@@ -233,6 +233,19 @@ fun PdfJsViewer(
         viewHolder[0]?.evaluateJavascript(goToPageScript(target), null)
     }
     // System back: leave full screen first, then close, as the back button does.
+    // Pre-make this document's questions as soon as it has loaded (only when the global switch is on).
+    LaunchedEffect(ready) {
+        val key = "doc-${item.id}-${item.updatedAt}"
+        if (ready && !item.hidden && com.filewall.data.ai.AiConsent.allAllowed(context) &&
+            com.filewall.data.ai.SuggestionCache.get(context, key) == null) {
+            val pages = viewHolder[0]?.readPageTexts().orEmpty()
+            val text = pages.mapIndexed { i, t -> "=== Page ${i + 1} ===\n$t" }.joinToString("\n\n")
+            if (text.isNotBlank()) {
+                val questions = com.filewall.ai.GeminiClient.suggestQuestions(text.take(60000)).getOrDefault(emptyList())
+                if (questions.isNotEmpty()) com.filewall.data.ai.SuggestionCache.put(context, key, questions)
+            }
+        }
+    }
     BackHandler(enabled = true) { if (fullScreen) onFullScreenChange(false) else onClose() }
     LaunchedEffect(ready) {
         while (ready) {

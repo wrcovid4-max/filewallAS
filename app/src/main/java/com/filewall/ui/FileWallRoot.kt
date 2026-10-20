@@ -320,6 +320,13 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     modifier = playerModifier,
                 )
             },
+            documentViewer = { docModifier ->
+                com.filewall.ui.viewer.DocumentViewer(
+                    item = item,
+                    decryptToCache = { container.repository.materialisePreview(it) },
+                    modifier = docModifier,
+                )
+            },
             pdfViewer = { pdfModifier, fullScreen, onFullScreenChange ->
                 com.filewall.ui.viewer.PdfJsViewer(
                     item = item,
