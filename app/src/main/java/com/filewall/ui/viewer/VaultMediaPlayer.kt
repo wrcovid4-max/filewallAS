@@ -189,7 +189,7 @@ fun VaultMediaPlayer(
         modifier
             .fillMaxSize()
             .background(Color.Black)
-            .pointerInput(Unit) { androidx.compose.foundation.gestures.detectTransformGestures { _, _, zoom, _ -> videoScale = (videoScale * zoom).coerceIn(1f, 4f) } }
+            .pointerInput(Unit) { detectTransformGestures { _, _, zoom, _ -> videoScale = (videoScale * zoom).coerceIn(1f, 4f) } }
             .clickable { controlsVisible = !controlsVisible },
         contentAlignment = Alignment.Center,
     ) {
