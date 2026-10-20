@@ -776,7 +776,7 @@ fun NewFolderRow(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick)
-            .padding(14.dp),
+            .padding(start = 14.dp, end = 14.dp, top = 0.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
