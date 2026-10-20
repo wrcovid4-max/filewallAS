@@ -152,8 +152,12 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 container.pendingOpen.value = null
                 if (item != null && !item.hidden) {
                     tab = Tab.VAULT
-                    viewerItem = item
-                    viewerOpen = true
+                    if (item.extension.equals("zip", ignoreCase = true)) {
+                        com.filewall.data.zip.VaultUnzipper.launch(context, container.repository, item)
+                    } else {
+                        viewerItem = item
+                        viewerOpen = true
+                    }
                 }
             }
         }
@@ -226,8 +230,12 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     settings = settings,
                     onUnlockHidden = { container.lock.unlock() },
                     onOpenItem = { item ->
-                        viewerItem = item
-                        viewerOpen = true
+                        if (item.extension.equals("zip", ignoreCase = true)) {
+                            com.filewall.data.zip.VaultUnzipper.launch(context, container.repository, item)
+                        } else {
+                            viewerItem = item
+                            viewerOpen = true
+                        }
                         // Photos, video and PDFs render in-app. Anything else needs a viewer
                         // we do not ship, so hand it over immediately rather than showing an
                         // empty stage first.

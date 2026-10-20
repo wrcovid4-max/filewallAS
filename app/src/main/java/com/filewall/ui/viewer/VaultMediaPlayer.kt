@@ -231,6 +231,13 @@ fun VaultMediaPlayer(
             )
         }
 
+        // Tap anywhere on the video to show or hide the controls, also while paused.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) { detectTransformGestures { _, _, zoom, _ -> videoScale = (videoScale * zoom).coerceIn(1f, 4f) } }
+                .clickable { controlsVisible = !controlsVisible },
+        )
         if (p != null && failure == null) {
             AnimatedVisibility(
                 visible = controlsVisible,

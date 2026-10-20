@@ -1,5 +1,11 @@
 package com.filewall.ui.ai
 
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.LaunchedEffect
@@ -488,6 +494,7 @@ private fun RecentChats(
     onOpen: (SavedChat) -> Unit,
     onDelete: (SavedChat) -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxWidth()) {
         Text(
             text = "Recent chats",
@@ -504,6 +511,12 @@ private fun RecentChats(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(chats, key = { it.id }) { chat ->
+                    val visible = remember(chat.id) { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visibleState = visible,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+                    ) {
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -529,13 +542,14 @@ private fun RecentChats(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        IconButton(onClick = { onDelete(chat) }) {
+                        IconButton(onClick = { visible.targetState = false; scope.launch { kotlinx.coroutines.delay(220); onDelete(chat) } }) {
                             Icon(
                                 Icons.Filled.Delete,
                                 contentDescription = "Delete chat",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
                     }
                 }
             }
