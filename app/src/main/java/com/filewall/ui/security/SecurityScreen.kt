@@ -429,7 +429,6 @@ fun SecurityScreen(
                             selected = settings.autoLock == option,
                             onClick = { viewModel.setAutoLock(option) },
                             modifier = Modifier.weight(1f),
-                            colors = if (option == AutoLock.NEVER) FilterChipDefaults.filterChipColors(selectedContainerColor = if (settings.autoLock == AutoLock.NEVER) androidx.compose.ui.graphics.Color(0xFF8B0000) else androidx.compose.ui.graphics.Color(0xFFFFCDD2), selectedLabelColor = if (settings.autoLock == AutoLock.NEVER) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF8B0000)) else FilterChipDefaults.filterChipColors(),
                         )
                     }
                 }
