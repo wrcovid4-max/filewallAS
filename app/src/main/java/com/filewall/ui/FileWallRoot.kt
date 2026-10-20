@@ -1,5 +1,8 @@
 package com.filewall.ui
 
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.dp
 import com.filewall.ui.ai.AskAiFab
 import com.filewall.ui.ai.AiChatSheet
@@ -261,6 +264,17 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
         }
     }
 
+    val unzipMessage by com.filewall.data.zip.UnzipMessages.message.collectAsState()
+    unzipMessage?.let { text ->
+        AlertDialog(
+            onDismissRequest = { com.filewall.data.zip.UnzipMessages.clear() },
+            title = { Text("Zip not unzipped") },
+            text = { Text(text) },
+            confirmButton = {
+                TextButton(onClick = { com.filewall.data.zip.UnzipMessages.clear() }) { Text("OK") }
+            },
+        )
+    }
     if (showStorage) {
         StorageSheet(breakdown = storage, onDismiss = { showStorage = false })
     }
