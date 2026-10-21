@@ -110,7 +110,8 @@ fun ConvertScreen(repository: VaultRepository, modifier: Modifier = Modifier) {
             "Converts happen on your phone, free, with no internet. Results are saved to your vault.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth(),
         )
         OutlinedButton(onClick = { picker.launch("*/*") }, modifier = Modifier.fillMaxWidth()) {
             Text(sourceName ?: "Pick a file")
