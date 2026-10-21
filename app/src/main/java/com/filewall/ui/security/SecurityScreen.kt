@@ -1,6 +1,5 @@
 package com.filewall.ui.security
 
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.BorderStroke
 import com.filewall.ui.common.InfoIcon
@@ -27,7 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
-import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudOff
@@ -41,7 +40,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SupportAgent
@@ -138,7 +137,7 @@ fun SecurityScreen(
         ActivityResultContracts.CreateDocument(VaultArchive.MIME_TYPE),
     ) { uri -> uri?.let { prompt = PassphrasePrompt.ExportLocal(it) } }
 
-    val driveContext = androidx.compose.ui.platform.LocalContext.current
+    val driveContext = LocalContext.current
     val driveFolderLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
@@ -270,7 +269,7 @@ fun SecurityScreen(
 
                 SettingSwitchRow(
                     title = stringResourceSafe(R.string.fingerprint_face),
-                    // Tell the user why it's off rather than leaving a dead grey switch.
+                    // Tell the user why it's off rather than leaving a dead gray switch.
                     description = when (biometricStatus) {
                         com.filewall.util.BiometricStatus.NONE_ENROLLED ->
                             stringResourceSafe(R.string.biometric_none_enrolled)
@@ -311,7 +310,7 @@ fun SecurityScreen(
                     enabled = settings.vaultLockEnabled,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.extraLarge,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         contentColor = MaterialTheme.colorScheme.primary,
                     ),
@@ -331,7 +330,7 @@ fun SecurityScreen(
                     enabled = state.hiddenUnlocked,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.extraLarge,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError,
                     ),
@@ -613,7 +612,7 @@ fun SecurityScreen(
                         }
 
                         Text(
-                            CloudSyncStatusText(state.cloudStatus),
+                            cloudSyncStatusText(state.cloudStatus),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -664,7 +663,7 @@ fun SecurityScreen(
                             }
                             IconButton(onClick = { viewModel.signOutOfCloud() }) {
                                 Icon(
-                                    Icons.Filled.Logout,
+                                    Icons.AutoMirrored.Filled.Logout,
                                     contentDescription = stringResourceSafe(R.string.sign_out),
                                     tint = MaterialTheme.colorScheme.error,
                                 )
@@ -715,7 +714,7 @@ fun SecurityScreen(
                         )
                         IconButton(onClick = { viewModel.signOut() }) {
                             Icon(
-                                Icons.Filled.Logout,
+                                Icons.AutoMirrored.Filled.Logout,
                                 contentDescription = stringResourceSafe(R.string.sign_out),
                                 tint = MaterialTheme.colorScheme.error,
                             )
@@ -921,7 +920,7 @@ private fun LinkText(label: String, onClick: () -> Unit) {
 
 /**
  * The persistent "is it syncing right now" indicator for the Cloud Sync card. The transient
- * popup for the same state lives in [SecurityViewModel.syncNow] via the shared Snackbar
+ * popup for the same state lives in [SecurityViewModel.syncNow] via the shared snack bar
  * channel — this is the always-visible counterpart, so the answer to "is it working" doesn't
  * require triggering a sync to find out.
  */
@@ -949,13 +948,13 @@ private fun CloudSyncStatusIcon(status: com.filewall.data.sync.SyncStatus) {
 }
 
 @Composable
-private fun CloudSyncStatusText(status: com.filewall.data.sync.SyncStatus): String = when (status) {
+private fun cloudSyncStatusText(status: com.filewall.data.sync.SyncStatus): String = when (status) {
     is com.filewall.data.sync.SyncStatus.SignedOut -> stringResourceSafe(R.string.sync_status_signed_out)
     is com.filewall.data.sync.SyncStatus.Idle -> stringResourceSafe(R.string.sync_status_idle)
     is com.filewall.data.sync.SyncStatus.Syncing -> status.label
     is com.filewall.data.sync.SyncStatus.Synced -> stringResourceSafe(
         R.string.sync_status_synced,
-        android.text.format.DateFormat.getTimeFormat(androidx.compose.ui.platform.LocalContext.current)
+        android.text.format.DateFormat.getTimeFormat(LocalContext.current)
             .format(java.util.Date(status.atEpochMs)),
     )
     is com.filewall.data.sync.SyncStatus.Error -> stringResourceSafe(R.string.sync_status_error, status.message)
@@ -970,7 +969,7 @@ private fun AboutLinks(modifier: Modifier = Modifier) {
         LinkEntry(stringResourceSafe(R.string.link_website), Icons.Filled.Language, AppLinks.WEBSITE),
         LinkEntry(stringResourceSafe(R.string.link_platforms), Icons.Filled.Devices, AppLinks.PLATFORMS),
         LinkEntry(stringResourceSafe(R.string.link_support), Icons.Filled.SupportAgent, AppLinks.SUPPORT),
-        LinkEntry(stringResourceSafe(R.string.link_news), Icons.Filled.Article, AppLinks.NEWS),
+        LinkEntry(stringResourceSafe(R.string.link_news), Icons.AutoMirrored.Filled.Article, AppLinks.NEWS),
         LinkEntry(stringResourceSafe(R.string.link_download), Icons.Filled.Download, AppLinks.DOWNLOAD),
         LinkEntry(stringResourceSafe(R.string.link_privacy), Icons.Filled.Shield, AppLinks.PRIVACY),
         LinkEntry(stringResourceSafe(R.string.link_terms), Icons.Filled.Description, AppLinks.TERMS),
