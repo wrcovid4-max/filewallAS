@@ -1,6 +1,6 @@
 package com.filewall.ui.security
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.BorderStroke
 import com.filewall.ui.common.InfoIcon
 import com.filewall.ui.common.DriveLogo
@@ -552,7 +552,7 @@ fun SecurityScreen(
                             containerColor = Color.White,
                             contentColor = Color(0xFF3C4043),
                         ),
-                        border = if (!isSystemInDarkTheme()) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
+                        border = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
                     ) {
                         com.filewall.ui.common.GoogleLogo()
                         Spacer(Modifier.width(10.dp))
@@ -654,7 +654,7 @@ fun SecurityScreen(
                                 onClick = { viewModel.syncNow() },
                                 modifier = Modifier.weight(1f),
                                 shape = MaterialTheme.shapes.extraLarge,
-                            border = if (!isSystemInDarkTheme()) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
+                            border = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
                                 enabled = state.cloudStatus !is com.filewall.data.sync.SyncStatus.Syncing,
                             ) {
                                 Icon(Icons.Filled.CloudSync, null, Modifier.size(18.dp))
@@ -745,7 +745,7 @@ fun SecurityScreen(
                             onClick = { viewModel.restoreFromDrive() },
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.extraLarge,
-                            border = if (!isSystemInDarkTheme()) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
+                            border = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
                         ) {
                             Icon(Icons.Filled.CloudDownload, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
