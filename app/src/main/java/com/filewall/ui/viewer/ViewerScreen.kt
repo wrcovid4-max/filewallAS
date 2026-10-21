@@ -129,7 +129,12 @@ fun ViewerScreen(
         // siblings stacked top-to-bottom, so the sheet can never sit *on top of* the content
         // or the controls. Toggling fullscreen just removes the bar and sheet, and the
         // content expands to fill the freed space.
-        Column(Modifier.fillMaxSize()) {
+        // For PDFs the whole column scrolls, so the toolbar, the document and the details move together.
+        Column(
+            Modifier
+                .fillMaxSize()
+                .then(if (item.isPdf) Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()) else Modifier),
+        ) {
             // -------------------------------------------------------- top bar
             // PDFs have their own bar with back, so this one (and its second back button) is hidden.
             AnimatedVisibility(visible = detailsVisible && !item.isPdf) {
@@ -169,7 +174,10 @@ fun ViewerScreen(
             // ---------------------------------------------------------- stage
             Box(
                 Modifier
-                    .weight(1f)
+                    .then(
+                        if (item.isPdf) Modifier.height(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp)
+                        else Modifier.weight(1f),
+                    )
                     .fillMaxWidth()
                     .pointerInput(item.id, zoomable) {
                         if (!zoomable) return@pointerInput
@@ -308,6 +316,7 @@ fun ViewerScreen(
                     onMove = onMove,
                     onRename = onRename,
                     onDelete = onDelete,
+                    scrollable = !item.isPdf,
                 )
             }
         }
@@ -341,14 +350,14 @@ private fun ItemDetailsCard(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    scrollable: Boolean = true,
 ) {
     // Laid out like Google Drive's file details: preview, title, labelled fields, protection.
     Column(
         modifier
             .fillMaxWidth()
-            .heightIn(max = 360.dp)
+            .then(if (scrollable) Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()) else Modifier)
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Text(
