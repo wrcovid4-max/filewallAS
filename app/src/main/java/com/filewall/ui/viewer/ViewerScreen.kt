@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import com.filewall.ui.common.InfoIcon
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.rememberScrollState
@@ -133,7 +134,7 @@ fun ViewerScreen(
         Column(
             Modifier
                 .fillMaxSize()
-                .then(if (item.isPdf) Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()) else Modifier),
+                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
         ) {
             // -------------------------------------------------------- top bar
             // PDFs have their own bar with back, so this one (and its second back button) is hidden.
@@ -174,10 +175,7 @@ fun ViewerScreen(
             // ---------------------------------------------------------- stage
             Box(
                 Modifier
-                    .then(
-                        if (item.isPdf) Modifier.height(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp)
-                        else Modifier.weight(1f),
-                    )
+                    .height(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp)
                     .fillMaxWidth()
                     .pointerInput(item.id, zoomable) {
                         if (!zoomable) return@pointerInput
@@ -316,7 +314,7 @@ fun ViewerScreen(
                     onMove = onMove,
                     onRename = onRename,
                     onDelete = onDelete,
-                    scrollable = !item.isPdf,
+                    scrollable = false,
                 )
             }
         }
@@ -356,6 +354,7 @@ private fun ItemDetailsCard(
     Column(
         modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .then(if (scrollable) Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()) else Modifier)
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 20.dp, vertical = 12.dp),
