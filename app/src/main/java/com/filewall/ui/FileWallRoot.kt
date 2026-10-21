@@ -1,5 +1,7 @@
 package com.filewall.ui
 
+import com.filewall.ui.convert.ConvertScreen
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.collectAsState
@@ -73,7 +75,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-private enum class Tab { VAULT, HIDDEN, SECURITY }
+private enum class Tab { VAULT, HIDDEN, CONVERT, SECURITY }
 
 /** Dialogs raised from the viewer, which lives above the tab content. */
 private sealed interface ViewerDialog {
@@ -172,6 +174,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             Tab.HIDDEN -> vaultViewModel.setFilter(VaultFilter.HIDDEN)
             Tab.VAULT -> vaultViewModel.setFilter(VaultFilter.UNLOCKED)
             Tab.SECURITY -> Unit
+            Tab.CONVERT -> Unit
         }
     }
     LaunchedEffect(vaultState.filter) {
@@ -206,6 +209,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 TabItem(Tab.VAULT, tab, Icons.Filled.PhotoLibrary, R.string.tab_open_vault) { tab = it }
                 TabItem(Tab.HIDDEN, tab, Icons.Filled.Lock, R.string.tab_hidden) { tab = it }
+                TabItem(Tab.CONVERT, tab, Icons.Filled.SwapHoriz, R.string.convert_tab) { tab = it }
                 TabItem(Tab.SECURITY, tab, Icons.Filled.Settings, R.string.tab_security) { tab = it }
             }
         },
@@ -225,7 +229,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     .fillMaxWidth()
                     .weight(1f),
             ) {
-                val current = if (tab == Tab.SECURITY) Tab.SECURITY else Tab.VAULT
+                val current = when (tab) { Tab.SECURITY -> Tab.SECURITY; Tab.CONVERT -> Tab.CONVERT; else -> Tab.VAULT }
             when (current) {
                 Tab.VAULT, Tab.HIDDEN -> VaultScreen(
                     viewModel = vaultViewModel,
@@ -250,6 +254,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                     },
                 )
 
+                Tab.CONVERT -> ConvertScreen(repository = container.repository, modifier = Modifier.fillMaxSize())
                 Tab.SECURITY -> SecurityScreen(
                     viewModel = securityViewModel,
                     onChangePasscode = {

@@ -429,6 +429,11 @@ fun SecurityScreen(
                             selected = settings.autoLock == option,
                             onClick = { viewModel.setAutoLock(option) },
                             modifier = Modifier.weight(1f),
+                            containerColor = if (option == AutoLock.NEVER) {
+                                if (settings.autoLock == AutoLock.NEVER) Color(0xFF8B0000) else Color(0xFFFFCDD2)
+                            } else {
+                                null
+                            },
                         )
                     }
                 }
@@ -548,7 +553,7 @@ fun SecurityScreen(
                             containerColor = Color.White,
                             contentColor = Color(0xFF3C4043),
                         ),
-                        border = if (!androidx.compose.material3.LocalContentColor.current.equals(Color.Unspecified)) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
+                        border = if (!isSystemInDarkTheme()) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
                     ) {
                         com.filewall.ui.common.GoogleLogo()
                         Spacer(Modifier.width(10.dp))
@@ -650,6 +655,7 @@ fun SecurityScreen(
                                 onClick = { viewModel.syncNow() },
                                 modifier = Modifier.weight(1f),
                                 shape = MaterialTheme.shapes.extraLarge,
+                            border = if (!isSystemInDarkTheme()) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
                                 enabled = state.cloudStatus !is com.filewall.data.sync.SyncStatus.Syncing,
                             ) {
                                 Icon(Icons.Filled.CloudSync, null, Modifier.size(18.dp))
@@ -740,6 +746,7 @@ fun SecurityScreen(
                             onClick = { viewModel.restoreFromDrive() },
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.extraLarge,
+                            border = if (!isSystemInDarkTheme()) BorderStroke(1.dp, Color(0xFFDADCE0)) else null,
                         ) {
                             Icon(Icons.Filled.CloudDownload, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
@@ -1076,12 +1083,13 @@ private fun ChoiceChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    containerColor: Color? = null,
 ) {
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.medium)
             .background(
-                if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                containerColor ?: if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
             )
             .border(
                 width = 1.dp,

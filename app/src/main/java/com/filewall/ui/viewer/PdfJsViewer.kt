@@ -364,6 +364,7 @@ fun PdfJsViewer(
                     "Read aloud",
                     tint = if (readAloud) ToolActiveColor else IconColor,
                 ) { readAloud = !readAloud }
+                BarIcon(Icons.Filled.Undo, "Undo") { viewHolder[0]?.evaluateJavascript("(function(){var a=window.PDFViewerApplication;var m=a&&a.annotationEditorUIManager;if(m&&m.undo)m.undo();})();", null) }
                 BarIcon(Icons.Filled.Save, "Save marked copy") {
                     if (!saving && ready) {
                         saving = true
