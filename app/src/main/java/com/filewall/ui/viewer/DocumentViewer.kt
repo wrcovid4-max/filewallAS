@@ -1,5 +1,7 @@
 package com.filewall.ui.viewer
 
+import kotlinx.coroutines.withTimeoutOrNull
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -66,10 +68,13 @@ fun extractReadableText(file: File, ext: String): String = when (ext) {
 fun DocumentViewer(item: VaultItem, decryptToCache: suspend (VaultItem) -> File, modifier: Modifier = Modifier) {
     var text by remember(item.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(item.id) {
-        text = withContext(Dispatchers.IO) {
-            runCatching { extractReadableText(decryptToCache(item), item.extension.lowercase()) }
-                .getOrElse { "This file could not be read: ${it.message}" }
-        }
+        text = withTimeoutOrNull(20_000) {
+            withContext(Dispatchers.IO) {
+                runCatching { extractReadableText(decryptToCache(item), item.extension.lowercase()) }
+                    .onFailure { Log.e("FileWallDoc", "read ${item.name}", it) }
+                    .getOrElse { "This file could not be read: ${it.message}" }
+            }
+        } ?: "This file took too long to open."
     }
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val shown = text

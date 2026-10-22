@@ -274,7 +274,7 @@ fun ViewerScreen(
 
                 // Controls live inside the stage box, pinned bottom-right — always above the
                 // details sheet because the sheet is a separate row below this whole box.
-                if (!item.isPdf) Row(
+                Row(
                     Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp),

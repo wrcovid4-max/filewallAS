@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import android.util.Log
 import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
@@ -117,6 +118,12 @@ private class OpenDoc(val renderer: PdfRenderer, val descriptor: ParcelFileDescr
     }
 }
 
+private sealed interface PageRender {
+    object Loading : PageRender
+    object Failed : PageRender
+    class Ready(val bmp: Bitmap) : PageRender
+}
+
 private sealed interface Loaded {
     object Loading : Loaded
     object Failed : Loaded
@@ -156,7 +163,7 @@ fun NativePdfReader(
                 val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                 val renderer = PdfRenderer(descriptor)
                 Loaded.Ready(OpenDoc(renderer, descriptor, renderer.pageCount))
-            }.getOrElse { Loaded.Failed }
+            }.onFailure { Log.e("FileWallPdf", "open ${item.name}", it) }.getOrElse { Loaded.Failed }
         }
     }
     DisposableEffect(loaded) {
@@ -380,9 +387,12 @@ private fun EditablePage(
     onTap: (Int, Offset, Tool) -> Unit,
     modifier: Modifier,
 ) {
-    val bitmap by produceState<Bitmap?>(null, doc, index, widthPx) {
-        value = withContext(Dispatchers.IO) { renderPage(doc, index, widthPx) }
+    val render by produceState<PageRender>(PageRender.Loading, doc, index, widthPx) {
+        value = withContext(Dispatchers.IO) {
+            renderPage(doc, index, widthPx)?.let { PageRender.Ready(it) } ?: PageRender.Failed
+        }
     }
+    val bitmap = (render as? PageRender.Ready)?.bmp
     var live by remember(index) { mutableStateOf<List<Offset>>(emptyList()) }
     var rectFrom by remember(index) { mutableStateOf<Offset?>(null) }
     var rectTo by remember(index) { mutableStateOf<Offset?>(null) }
@@ -390,7 +400,8 @@ private fun EditablePage(
     val bmp = bitmap
     if (bmp == null) {
         Box(modifier.height(420.dp).background(Color.White), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            if (render == PageRender.Failed) Text("This page could not be drawn.", color = Color.Black)
+            else CircularProgressIndicator()
         }
         return
     }
@@ -575,7 +586,7 @@ private fun renderPage(doc: OpenDoc, index: Int, widthPx: Int): Bitmap? = synchr
                 page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             }
         }
-    }.getOrNull()
+    }.onFailure { Log.e("FileWallPdf", "render page $index", it) }.getOrNull()
 }
 
 /** Writes a new PDF: each page as it is, with the marks drawn on top. */
