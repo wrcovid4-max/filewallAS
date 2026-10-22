@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.map
 /** Every toggle on the Security tab, plus the vault toolbar's view preferences. */
 data class VaultSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
+    /** Language tag picked in the 🌐 menu. Empty means the phone language. */
+    val language: String = "",
     val vaultLockEnabled: Boolean = true,
     val biometricEnabled: Boolean = false,
     val disablePasscodeFallback: Boolean = false,
@@ -41,6 +43,7 @@ class SettingsStore(context: Context) {
     val settings: Flow<VaultSettings> = store.data.map { prefs ->
         VaultSettings(
             theme = prefs[Keys.THEME]?.toEnum { ThemeMode.valueOf(it) } ?: ThemeMode.SYSTEM,
+            language = prefs[Keys.LANGUAGE] ?: "",
             vaultLockEnabled = prefs[Keys.VAULT_LOCK] ?: true,
             biometricEnabled = prefs[Keys.BIOMETRIC] ?: false,
             disablePasscodeFallback = prefs[Keys.NO_PIN_FALLBACK] ?: false,
@@ -57,6 +60,7 @@ class SettingsStore(context: Context) {
     }
 
     suspend fun setTheme(value: ThemeMode) = put(Keys.THEME, value.name)
+    suspend fun setLanguage(tag: String) = put(Keys.LANGUAGE, tag)
     suspend fun setVaultLockEnabled(value: Boolean) = put(Keys.VAULT_LOCK, value)
     suspend fun setBiometricEnabled(value: Boolean) = put(Keys.BIOMETRIC, value)
     suspend fun setDisablePasscodeFallback(value: Boolean) = put(Keys.NO_PIN_FALLBACK, value)
@@ -79,6 +83,7 @@ class SettingsStore(context: Context) {
 
     private object Keys {
         val THEME = stringPreferencesKey("theme")
+        val LANGUAGE = stringPreferencesKey("language")
         val VAULT_LOCK = booleanPreferencesKey("vault_lock_enabled")
         val BIOMETRIC = booleanPreferencesKey("biometric_enabled")
         val NO_PIN_FALLBACK = booleanPreferencesKey("disable_passcode_fallback")

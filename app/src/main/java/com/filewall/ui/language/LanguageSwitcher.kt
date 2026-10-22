@@ -30,7 +30,7 @@ import com.filewall.R
  * for confirmation, then applies it: AppCompat recreates the activity, which is the restart.
  */
 @Composable
-fun LanguageSwitcher(modifier: Modifier = Modifier) {
+fun LanguageSwitcher(modifier: Modifier = Modifier, onLanguageSaved: (String) -> Unit = {}) {
     val context = LocalContext.current
     // Language the user picked, waiting for confirmation before the app restarts.
     var pendingLanguage by remember { mutableStateOf<String?>(null) }
@@ -74,6 +74,7 @@ fun LanguageSwitcher(modifier: Modifier = Modifier) {
                 TextButton(onClick = {
                     pendingLanguage = null
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+                    onLanguageSaved(tag)
                 }) {
                     Text(stringResource(R.string.action_restart))
                 }

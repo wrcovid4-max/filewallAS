@@ -87,9 +87,11 @@ private sealed interface ViewerDialog {
 
 @Composable
 fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
+    val switcherScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
         FileWallScreens(container, Modifier.fillMaxSize())
         com.filewall.ui.language.LanguageSwitcher(
+            onLanguageSaved = { tag -> switcherScope.launch { container.settings.setLanguage(tag) } },
             Modifier
                 .align(androidx.compose.ui.Alignment.TopEnd)
                 .statusBarsPadding()
