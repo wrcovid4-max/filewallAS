@@ -1,5 +1,6 @@
 package com.filewall.ui
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import com.filewall.ui.convert.ConvertScreen
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.TextButton
@@ -91,7 +92,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
         com.filewall.ui.common.LanguageGlobe(
             Modifier
                 .align(androidx.compose.ui.Alignment.TopEnd)
-                .androidx.compose.foundation.layout.statusBarsPadding()
+                .statusBarsPadding()
                 .padding(end = 4.dp),
         )
     }
