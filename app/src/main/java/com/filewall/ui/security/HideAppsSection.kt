@@ -49,6 +49,12 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.drawable.toBitmap
 
+private tailrec fun Context.findFragmentActivity(): androidx.fragment.app.FragmentActivity? = when (this) {
+    is androidx.fragment.app.FragmentActivity -> this
+    is android.content.ContextWrapper -> baseContext.findFragmentActivity()
+    else -> null
+}
+
 /** One installed app that can be opened from the home screen. */
 private data class AppEntry(val label: String, val pkg: String, val icon: Drawable)
 
@@ -84,7 +90,20 @@ fun HideAppsCard(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = { listOpen = true }) { Text("Hide Apps") }
+        OutlinedButton(onClick = {
+            val host = context.findFragmentActivity()
+            if (host != null) {
+                // The phone's own biometric screen (fingerprint or face, or screen lock) before the list opens.
+                com.filewall.util.Biometrics.prompt(
+                    activity = host,
+                    title = "Hide Apps",
+                    subtitle = "Confirm it's you to choose an app",
+                    negativeLabel = "Cancel",
+                    onSuccess = { listOpen = true },
+                    onFailure = { },
+                )
+            }
+        }) { Text("Hide Apps") }
     }
     if (listOpen) {
         Dialog(onDismissRequest = { listOpen = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
