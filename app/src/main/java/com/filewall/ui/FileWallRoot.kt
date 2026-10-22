@@ -92,7 +92,7 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
         FileWallScreens(container, Modifier.fillMaxSize())
         com.filewall.ui.language.LanguageSwitcher(
             onLanguageSaved = { tag -> switcherScope.launch { container.settings.setLanguage(tag) } },
-            Modifier
+            modifier = Modifier
                 .align(androidx.compose.ui.Alignment.TopEnd)
                 .statusBarsPadding()
                 .padding(end = 8.dp, top = 4.dp),
