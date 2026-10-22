@@ -2,6 +2,7 @@ package com.filewall.ui.viewer
 
 import android.util.Log
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
 import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
 import android.graphics.RectF
@@ -29,7 +30,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
@@ -41,11 +41,11 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Title
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -58,14 +58,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,11 +79,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.filewall.model.VaultItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -95,13 +92,14 @@ import java.io.File
 /** The editing tools, as in Acrobat. */
 private enum class Tool { NONE, DRAW, RECT, TEXT, SIGN, CROSS, CHECK, DOT }
 
-/** Colours and line thicknesses offered in the drawing toolbar. */
+/** Colors and line thicknesses offered in the drawing toolbar. */
 private val INK_COLORS = listOf(0xFFE53935.toInt(), 0xFF000000.toInt(), 0xFF1E88E5.toInt(), 0xFF43A047.toInt())
 private val INK_WIDTHS = listOf(1.5f, 3f, 6f)
+private const val RENDER_WIDTH = 1080
 
 /**
  * Marks are stored as fractions of the page (0..1 across and down), so they stay put at any size.
- * Colours are ARGB ints, widths are in points.
+ * Colors are ARGB ints, widths are in points.
  */
 private sealed interface Mark { val page: Int }
 private data class StrokeMark(override val page: Int, val points: List<Offset>, val argb: Int, val width: Float) : Mark
@@ -121,7 +119,7 @@ private class OpenDoc(val renderer: PdfRenderer, val descriptor: ParcelFileDescr
 private sealed interface PageRender {
     object Loading : PageRender
     object Failed : PageRender
-    class Ready(val bmp: Bitmap) : PageRender
+    class Ready(val bitmap: Bitmap) : PageRender
 }
 
 private sealed interface Loaded {
@@ -131,7 +129,7 @@ private sealed interface Loaded {
 }
 
 /**
- * The PDF reader, with Acrobat-style editing: a pencil to draw, a colour and a line thickness,
+ * The PDF reader, with Acrobat-style editing: a pencil to draw, a color and a line thickness,
  * an A for text, a cross, a check mark, a dot and a rounded rectangle, a signature, undo, and
  * save as a new file. The original file is never changed.
  */
@@ -143,12 +141,11 @@ fun NativePdfReader(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val widthPx = 1080
-    var layout by rememberSaveable(item.id) { mutableStateOf(2) }        // 0 single, 1 two pages, 2 continuous
+    var layout by rememberSaveable(item.id) { mutableIntStateOf(2) }        // 0 single, 1 two pages, 2 continuous
     var tool by rememberSaveable(item.id) { mutableStateOf(Tool.NONE) }
     var panelOpen by rememberSaveable(item.id) { mutableStateOf(false) }  // the Acrobat-style second toolbar
-    var colorIndex by rememberSaveable(item.id) { mutableStateOf(0) }
-    var widthIndex by rememberSaveable(item.id) { mutableStateOf(1) }
+    var colorIndex by rememberSaveable(item.id) { mutableIntStateOf(0) }
+    var widthIndex by rememberSaveable(item.id) { mutableIntStateOf(1) }
     val marks = remember(item.id) { mutableStateListOf<Mark>() }
     var pending by remember(item.id) { mutableStateOf<Pending?>(null) }
     var status by remember(item.id) { mutableStateOf("") }
@@ -174,7 +171,7 @@ fun NativePdfReader(
         // Top: page layout.
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
             LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
-            LayoutIcon(Icons.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
+            LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
             LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
         }
 
@@ -186,7 +183,6 @@ fun NativePdfReader(
                 is Loaded.Ready -> PagesView(
                     doc = state.doc,
                     layout = layout,
-                    widthPx = widthPx,
                     tool = tool,
                     argb = argb,
                     width = width,
@@ -225,16 +221,16 @@ fun NativePdfReader(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ToolIcon(Icons.Filled.Brush, "Draw", false) {
+                ToolIcon(Icons.Filled.Brush, "Draw") {
                     panelOpen = true
                     tool = Tool.DRAW
                 }
-                ToolIcon(Icons.Filled.DriveFileRenameOutline, "Fill & Sign", false) {
+                ToolIcon(Icons.Filled.DriveFileRenameOutline, "Fill & Sign") {
                     panelOpen = true
                     tool = Tool.SIGN
                 }
                 IconButton(onClick = { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }) {
-                    Icon(Icons.Filled.Undo, "Undo", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.Undo, "Undo", tint = Color.White)
                 }
                 SaveButton(loaded, marks, scope, item, saveCopy) { status = it }
             }
@@ -257,7 +253,7 @@ fun NativePdfReader(
                 TinyTool(Icons.Filled.FiberManualRecord, "Dot", tool == Tool.DOT) { tool = toggle(tool, Tool.DOT) }
                 TinyTool(Icons.Filled.CropSquare, "Rectangle", tool == Tool.RECT) { tool = toggle(tool, Tool.RECT) }
                 IconButton(onClick = { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Undo, "Undo", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.Undo, "Undo", tint = Color.White, modifier = Modifier.size(18.dp))
                 }
                 SaveButton(loaded, marks, scope, item, saveCopy) { status = it }
                 IconButton(onClick = { panelOpen = false; tool = Tool.NONE }, modifier = Modifier.size(32.dp)) {
@@ -327,10 +323,10 @@ private fun LayoutIcon(icon: ImageVector, label: String, selected: Boolean, onCl
 }
 
 @Composable
-private fun ToolIcon(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+private fun ToolIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     Column(Modifier.clickable(onClick = onClick).padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, label, tint = if (selected) Color(0xFFB39DDB) else Color.White)
-        Text(label, color = if (selected) Color(0xFFB39DDB) else Color.White, style = MaterialTheme.typography.labelSmall)
+        Icon(icon, label, tint = Color.White)
+        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -338,7 +334,6 @@ private fun ToolIcon(icon: ImageVector, label: String, selected: Boolean, onClic
 private fun PagesView(
     doc: OpenDoc,
     layout: Int,
-    widthPx: Int,
     tool: Tool,
     argb: Int,
     width: Float,
@@ -348,7 +343,7 @@ private fun PagesView(
     onTap: (Int, Offset, Tool) -> Unit,
 ) {
     val page: @Composable (Int, Modifier) -> Unit = { index, pageModifier ->
-        EditablePage(doc, index, widthPx, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
+        EditablePage(doc, index, RENDER_WIDTH, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
     }
     when (layout) {
         0 -> LazyRow(Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
@@ -377,7 +372,6 @@ private fun PagesView(
 private fun EditablePage(
     doc: OpenDoc,
     index: Int,
-    widthPx: Int,
     tool: Tool,
     argb: Int,
     width: Float,
@@ -387,27 +381,26 @@ private fun EditablePage(
     onTap: (Int, Offset, Tool) -> Unit,
     modifier: Modifier,
 ) {
-    val render by produceState<PageRender>(PageRender.Loading, doc, index, widthPx) {
+    val render by produceState<PageRender>(PageRender.Loading, doc, index, RENDER_WIDTH) {
         value = withContext(Dispatchers.IO) {
-            renderPage(doc, index, widthPx)?.let { PageRender.Ready(it) } ?: PageRender.Failed
+            renderPage(doc, index, RENDER_WIDTH)?.let { PageRender.Ready(it) } ?: PageRender.Failed
         }
     }
-    val bitmap = (render as? PageRender.Ready)?.bmp
+    val bitmap = (render as? PageRender.Ready)?.bitmap
     var live by remember(index) { mutableStateOf<List<Offset>>(emptyList()) }
     var rectFrom by remember(index) { mutableStateOf<Offset?>(null) }
     var rectTo by remember(index) { mutableStateOf<Offset?>(null) }
 
-    val bmp = bitmap
-    if (bmp == null) {
+    if (bitmap == null) {
         Box(modifier.height(420.dp).background(Color.White), contentAlignment = Alignment.Center) {
             if (render == PageRender.Failed) Text("This page could not be drawn.", color = Color.Black)
             else CircularProgressIndicator()
         }
         return
     }
-    Box(modifier.fillMaxWidth().aspectRatio(bmp.width.toFloat() / bmp.height.toFloat()).background(Color.White)) {
+    Box(modifier.fillMaxWidth().aspectRatio(bitmap.width.toFloat() / bitmap.height.toFloat()).background(Color.White)) {
         Image(
-            bitmap = bmp.asImageBitmap(),
+            bitmap = bitmap.asImageBitmap(),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillBounds,
@@ -577,11 +570,11 @@ private fun SignatureDialog(onDismiss: () -> Unit, onConfirm: (List<List<Offset>
 }
 
 /** Renders one page to a bitmap, one page at a time (PdfRenderer allows a single open page). */
-private fun renderPage(doc: OpenDoc, index: Int, widthPx: Int): Bitmap? = synchronized(doc.renderer) {
+private fun renderPage(doc: OpenDoc, index: Int, RENDER_WIDTH: Int): Bitmap? = synchronized(doc.renderer) {
     runCatching {
         doc.renderer.openPage(index).use { page ->
-            val heightPx = (widthPx * page.height / page.width.toFloat()).toInt().coerceAtLeast(1)
-            Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888).apply {
+            val heightPx = (RENDER_WIDTH * page.height / page.width.toFloat()).toInt().coerceAtLeast(1)
+            createBitmap(RENDER_WIDTH, heightPx, Bitmap.Config.ARGB_8888).apply {
                 eraseColor(android.graphics.Color.WHITE)
                 page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             }
@@ -596,11 +589,11 @@ private fun buildEdited(doc: OpenDoc, marks: List<Mark>): ByteArray = synchroniz
         doc.renderer.openPage(index).use { page ->
             val wPt = page.width
             val hPt = page.height
-            val bmp = Bitmap.createBitmap(wPt * 2, hPt * 2, Bitmap.Config.ARGB_8888)
-            bmp.eraseColor(android.graphics.Color.WHITE)
-            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+            val bitmap = createBitmap(wPt * 2, hPt * 2, Bitmap.Config.ARGB_8888)
+            bitmap.eraseColor(android.graphics.Color.WHITE)
+            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
             val out = pdf.startPage(PdfDocument.PageInfo.Builder(wPt, hPt, index + 1).create())
-            out.canvas.drawBitmap(bmp, null, RectF(0f, 0f, wPt.toFloat(), hPt.toFloat()), null)
+            out.canvas.drawBitmap(bitmap, null, RectF(0f, 0f, wPt.toFloat(), hPt.toFloat()), null)
             val wf = wPt.toFloat()
             val hf = hPt.toFloat()
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -664,7 +657,7 @@ private fun buildEdited(doc: OpenDoc, marks: List<Mark>): ByteArray = synchroniz
                 }
             }
             pdf.finishPage(out)
-            bmp.recycle()
+            bitmap.recycle()
         }
     }
     val bytes = ByteArrayOutputStream()
