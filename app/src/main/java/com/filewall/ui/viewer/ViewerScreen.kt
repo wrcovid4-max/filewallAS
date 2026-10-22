@@ -6,8 +6,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -35,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileMove
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.OpenInNew
@@ -48,7 +45,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,8 +66,6 @@ import com.filewall.R
 import com.filewall.model.FileCategory
 import com.filewall.model.VaultItem
 import com.filewall.ui.common.stringResourceSafe
-import com.filewall.ui.theme.DangerContainer
-import com.filewall.ui.theme.OnDangerContainer
 import com.filewall.ui.theme.ViewerPurple
 import com.filewall.util.formatBytes
 import com.filewall.util.formatTimestamp

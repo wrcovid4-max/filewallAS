@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import com.filewall.ui.ai.AiChatSheet
-import androidx.compose.material.icons.filled.AutoAwesome
 import android.content.Context
 import android.content.Intent
 import android.speech.tts.TextToSpeech
@@ -72,7 +71,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon

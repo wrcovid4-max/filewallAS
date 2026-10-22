@@ -13,12 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.AnimatedContent
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -69,8 +63,6 @@ import com.filewall.ui.vault.MoveToFolderDialog
 import com.filewall.ui.vault.TextInputDialog
 import com.filewall.ui.vault.VaultScreen
 import com.filewall.ui.vault.VaultViewModel
-import com.filewall.ui.viewer.VaultPdfViewer
-import com.filewall.ui.viewer.VaultVideoPlayer
 import com.filewall.ui.viewer.ViewerScreen
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
