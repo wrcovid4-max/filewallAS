@@ -164,7 +164,9 @@ fun NativePdfReader(
         }
     }
     DisposableEffect(loaded) {
-        onDispose { (loaded as? Loaded.Ready)?.doc?.close() }
+        // Capture the document this effect opened, so cleanup closes that one and no other.
+        val opened = (loaded as? Loaded.Ready)?.doc
+        onDispose { opened?.close() }
     }
 
     Column(modifier.fillMaxSize().background(Color(0xFF202020))) {
