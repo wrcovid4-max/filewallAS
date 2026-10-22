@@ -121,6 +121,7 @@ fun VaultMediaPlayer(
 ) {
     val context: Context = LocalContext.current
     var player by remember(item.id) { mutableStateOf<ExoPlayer?>(null) }
+    var mediaSession by remember(item.id) { mutableStateOf<androidx.media3.session.MediaSession?>(null) }
     var failure by remember(item.id) { mutableStateOf<String?>(null) }
     var isPlaying by remember(item.id) { mutableStateOf(false) }
     var position by remember(item.id) { mutableLongStateOf(0L) }
@@ -149,13 +150,17 @@ fun VaultMediaPlayer(
                         MediaItem.Builder()
                             .setUri(uri)
                             .setMimeType(playbackMime(item))
+                            .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder().setTitle(item.name).build())
                             .build(),
                     )
                     prepare()
                     playWhenReady = true
                 }
         }
-            .onSuccess { player = it }
+            .onSuccess { exo ->
+                player = exo
+                mediaSession = com.filewall.playback.PlaybackSession.publish(context, exo)
+            }
             .onFailure { failure = it.message ?: "Could not open this file" }
     }
 
@@ -180,6 +185,8 @@ fun VaultMediaPlayer(
 
     DisposableEffect(item.id) {
         onDispose {
+            mediaSession?.let { com.filewall.playback.PlaybackSession.release(it) }
+            mediaSession = null
             player?.release()
             player = null
         }
