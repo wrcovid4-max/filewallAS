@@ -28,12 +28,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CropSquare
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
-import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Undo
@@ -43,6 +49,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,13 +67,16 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -78,13 +88,21 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-/** Editing tools. DRAW drags freehand, TEXT and SIGN place an item where the page is tapped. */
-private enum class Tool { NONE, DRAW, TEXT, SIGN }
+/** The editing tools, as in Acrobat. */
+private enum class Tool { NONE, DRAW, RECT, TEXT, SIGN, CROSS, CHECK, DOT }
 
-/** Marks are stored as fractions of the page (0..1 across and down), so they stay put at any size. */
+/** Colours and line thicknesses offered in the drawing toolbar. */
+private val INK_COLORS = listOf(0xFFE53935.toInt(), 0xFF000000.toInt(), 0xFF1E88E5.toInt(), 0xFF43A047.toInt())
+private val INK_WIDTHS = listOf(1.5f, 3f, 6f)
+
+/**
+ * Marks are stored as fractions of the page (0..1 across and down), so they stay put at any size.
+ * Colours are ARGB ints, widths are in points.
+ */
 private sealed interface Mark { val page: Int }
-private data class StrokeMark(override val page: Int, val points: List<Offset>) : Mark
-private data class TextMark(override val page: Int, val at: Offset, val text: String) : Mark
+private data class StrokeMark(override val page: Int, val points: List<Offset>, val argb: Int, val width: Float) : Mark
+private data class ShapeMark(override val page: Int, val kind: Tool, val at: Offset, val to: Offset, val argb: Int, val width: Float) : Mark
+private data class TextMark(override val page: Int, val at: Offset, val text: String, val argb: Int) : Mark
 private data class SignMark(override val page: Int, val at: Offset, val strokes: List<List<Offset>>) : Mark
 
 private data class Pending(val page: Int, val at: Offset, val tool: Tool)
@@ -103,8 +121,9 @@ private sealed interface Loaded {
 }
 
 /**
- * The PDF reader: page layouts, plus full editing. Draw, add text, sign (drawn once, then placed),
- * undo, and save as a new file in the vault. The original file is never changed.
+ * The PDF reader, with Acrobat-style editing: a pencil to draw, a colour and a line thickness,
+ * an A for text, a cross, a check mark, a dot and a rounded rectangle, a signature, undo, and
+ * save as a new file. The original file is never changed.
  */
 @Composable
 fun NativePdfReader(
@@ -115,11 +134,17 @@ fun NativePdfReader(
 ) {
     val scope = rememberCoroutineScope()
     val widthPx = 1080
-    var layout by rememberSaveable(item.id) { mutableStateOf(2) }   // 0 single, 1 two pages, 2 continuous
+    var layout by rememberSaveable(item.id) { mutableStateOf(2) }        // 0 single, 1 two pages, 2 continuous
     var tool by rememberSaveable(item.id) { mutableStateOf(Tool.NONE) }
+    var panelOpen by rememberSaveable(item.id) { mutableStateOf(false) }  // the Acrobat-style second toolbar
+    var colorIndex by rememberSaveable(item.id) { mutableStateOf(0) }
+    var widthIndex by rememberSaveable(item.id) { mutableStateOf(1) }
     val marks = remember(item.id) { mutableStateListOf<Mark>() }
     var pending by remember(item.id) { mutableStateOf<Pending?>(null) }
     var status by remember(item.id) { mutableStateOf("") }
+
+    val argb = INK_COLORS[colorIndex]
+    val width = INK_WIDTHS[widthIndex]
 
     val loaded by produceState<Loaded>(Loaded.Loading, item.id) {
         value = withContext(Dispatchers.IO) {
@@ -137,57 +162,92 @@ fun NativePdfReader(
 
     Column(modifier.fillMaxSize().background(Color(0xFF202020))) {
         // Top: page layout.
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            IconButton(onClick = { layout = 0 }) { Icon(Icons.Filled.Description, "Single page", tint = if (layout == 0) Color(0xFFB39DDB) else Color.White) }
-            IconButton(onClick = { layout = 1 }) { Icon(Icons.Filled.MenuBook, "Two pages", tint = if (layout == 1) Color(0xFFB39DDB) else Color.White) }
-            IconButton(onClick = { layout = 2 }) { Icon(Icons.Filled.ViewAgenda, "Continuous", tint = if (layout == 2) Color(0xFFB39DDB) else Color.White) }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
+            LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
+            LayoutIcon(Icons.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
+            LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
         }
 
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             when (val state = loaded) {
                 Loaded.Loading -> CircularProgressIndicator(color = Color.White)
-                Loaded.Failed -> Text(
-                    "This PDF could not be opened.",
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(32.dp),
-                )
+                Loaded.Failed -> Text("This PDF could not be opened.", color = Color.White,
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(32.dp))
                 is Loaded.Ready -> PagesView(
                     doc = state.doc,
                     layout = layout,
                     widthPx = widthPx,
                     tool = tool,
+                    argb = argb,
+                    width = width,
                     marks = marks,
-                    onStroke = { page, points -> marks.add(StrokeMark(page, points)) },
-                    onTap = { page, at -> pending = Pending(page, at, tool) },
+                    onStroke = { page, points -> marks.add(StrokeMark(page, points, argb, width)) },
+                    onShape = { page, from, to, kind -> marks.add(ShapeMark(page, kind, from, to, argb, width)) },
+                    onTap = { page, at, kind ->
+                        when (kind) {
+                            Tool.TEXT, Tool.SIGN -> pending = Pending(page, at, kind)
+                            else -> marks.add(ShapeMark(page, kind, at, at, argb, width))
+                        }
+                    },
                 )
+            }
+        }
+
+        // The Acrobat-style second toolbar, shown when Draw or Fill & Sign is pressed.
+        if (panelOpen) {
+            Row(
+                Modifier.fillMaxWidth().background(Color(0xFF2B2B2B)).padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ToolIcon(Icons.Filled.Edit, "Pencil", tool == Tool.DRAW) { tool = toggle(tool, Tool.DRAW) }
+                IconButton(onClick = { colorIndex = (colorIndex + 1) % INK_COLORS.size }) {
+                    Box(Modifier.size(22.dp).background(Color(INK_COLORS[colorIndex]), CircleShape))
+                }
+                IconButton(onClick = { widthIndex = (widthIndex + 1) % INK_WIDTHS.size }) {
+                    Icon(Icons.Filled.AutoFixHigh, "Line thickness", tint = Color.White)
+                }
+                ToolIcon(Icons.Filled.Edit, "Add text", tool == Tool.TEXT) { tool = toggle(tool, Tool.TEXT) }
+                ToolIcon(Icons.Filled.Close, "Cross", tool == Tool.CROSS) { tool = toggle(tool, Tool.CROSS) }
+                ToolIcon(Icons.Filled.Check, "Check", tool == Tool.CHECK) { tool = toggle(tool, Tool.CHECK) }
+                ToolIcon(Icons.Filled.FiberManualRecord, "Dot", tool == Tool.DOT) { tool = toggle(tool, Tool.DOT) }
+                ToolIcon(Icons.Filled.CropSquare, "Rectangle", tool == Tool.RECT) { tool = toggle(tool, Tool.RECT) }
+                IconButton(onClick = { panelOpen = false; tool = Tool.NONE }) {
+                    Icon(Icons.Filled.Close, "Close toolbar", tint = Color(0xFFB0BEC5))
+                }
             }
         }
 
         // Hint for the active tool.
         val hint = when (tool) {
             Tool.DRAW -> "Drag on a page to draw."
+            Tool.RECT -> "Drag on a page to draw a rectangle."
             Tool.TEXT -> "Tap a spot on a page to add text."
             Tool.SIGN -> "Tap a spot on a page to place your signature."
+            Tool.CROSS, Tool.CHECK, Tool.DOT -> "Tap a spot on a page to place it."
             Tool.NONE -> status
         }
         if (hint.isNotBlank()) {
-            Text(hint, color = Color.White, style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            Text(hint, color = Color.White, style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         }
 
-        // Bottom: the tools.
+        // The main bar: Draw, Fill & Sign, undo, save.
         Row(
             Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).padding(vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ToolButton(Icons.Filled.Draw, "Draw", tool == Tool.DRAW) { tool = toggle(tool, Tool.DRAW) }
-            ToolButton(Icons.Filled.Edit, "Add text", tool == Tool.TEXT) { tool = toggle(tool, Tool.TEXT) }
-            ToolButton(Icons.Filled.DriveFileRenameOutline, "Sign", tool == Tool.SIGN) { tool = toggle(tool, Tool.SIGN) }
+            ToolIcon(Icons.Filled.Brush, "Draw", panelOpen && tool == Tool.DRAW) {
+                panelOpen = true
+                tool = if (tool == Tool.DRAW) Tool.NONE else Tool.DRAW
+                if (tool == Tool.NONE) panelOpen = false
+            }
+            ToolIcon(Icons.Filled.DriveFileRenameOutline, "Fill & Sign", panelOpen && tool == Tool.SIGN) {
+                panelOpen = true
+                tool = if (tool == Tool.SIGN) Tool.NONE else Tool.SIGN
+                if (tool == Tool.NONE) panelOpen = false
+            }
             IconButton(onClick = { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }) {
                 Icon(Icons.Filled.Undo, "Undo", tint = Color.White)
             }
@@ -208,7 +268,7 @@ fun NativePdfReader(
             TextEntryDialog(
                 onDismiss = { pending = null },
                 onConfirm = { text ->
-                    if (text.isNotBlank()) marks.add(TextMark(p.page, p.at, text))
+                    if (text.isNotBlank()) marks.add(TextMark(p.page, p.at, text, argb))
                     pending = null
                 },
             )
@@ -227,13 +287,17 @@ fun NativePdfReader(
 private fun toggle(current: Tool, wanted: Tool): Tool = if (current == wanted) Tool.NONE else wanted
 
 @Composable
-private fun ToolButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
-    Column(
-        Modifier.clickable(onClick = onClick).padding(horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+private fun LayoutIcon(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
         Icon(icon, label, tint = if (selected) Color(0xFFB39DDB) else Color.White)
-        Text(label, color = if (selected) Color(0xFFB39DDB) else Color.White, style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun ToolIcon(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    Column(Modifier.clickable(onClick = onClick).padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, label, tint = if (selected) Color(0xFFB39DDB) else Color.White)
+        Text(label, color = if (selected) Color(0xFFB39DDB) else Color.White, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -243,12 +307,15 @@ private fun PagesView(
     layout: Int,
     widthPx: Int,
     tool: Tool,
+    argb: Int,
+    width: Float,
     marks: SnapshotStateList<Mark>,
     onStroke: (Int, List<Offset>) -> Unit,
-    onTap: (Int, Offset) -> Unit,
+    onShape: (Int, Offset, Offset, Tool) -> Unit,
+    onTap: (Int, Offset, Tool) -> Unit,
 ) {
     val page: @Composable (Int, Modifier) -> Unit = { index, pageModifier ->
-        EditablePage(doc, index, widthPx, tool, marks, onStroke, onTap, pageModifier)
+        EditablePage(doc, index, widthPx, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
     }
     when (layout) {
         0 -> LazyRow(Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
@@ -279,16 +346,20 @@ private fun EditablePage(
     index: Int,
     widthPx: Int,
     tool: Tool,
+    argb: Int,
+    width: Float,
     marks: List<Mark>,
     onStroke: (Int, List<Offset>) -> Unit,
-    onTap: (Int, Offset) -> Unit,
+    onShape: (Int, Offset, Offset, Tool) -> Unit,
+    onTap: (Int, Offset, Tool) -> Unit,
     modifier: Modifier,
 ) {
     val bitmap by produceState<Bitmap?>(null, doc, index, widthPx) {
         value = withContext(Dispatchers.IO) { renderPage(doc, index, widthPx) }
     }
     var live by remember(index) { mutableStateOf<List<Offset>>(emptyList()) }
-    val density = LocalDensity.current
+    var rectFrom by remember(index) { mutableStateOf<Offset?>(null) }
+    var rectTo by remember(index) { mutableStateOf<Offset?>(null) }
 
     val bmp = bitmap
     if (bmp == null) {
@@ -322,7 +393,24 @@ private fun EditablePage(
                             },
                             onDragCancel = { live = emptyList() },
                         )
-                        Tool.TEXT, Tool.SIGN -> detectTapGestures { tap -> onTap(index, norm(tap)) }
+                        Tool.RECT -> detectDragGestures(
+                            onDragStart = { start -> rectFrom = norm(start); rectTo = norm(start) },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                rectTo = norm(change.position)
+                            },
+                            onDragEnd = {
+                                val a = rectFrom
+                                val b = rectTo
+                                if (a != null && b != null) onShape(index, a, b, Tool.RECT)
+                                rectFrom = null
+                                rectTo = null
+                            },
+                            onDragCancel = { rectFrom = null; rectTo = null },
+                        )
+                        Tool.TEXT, Tool.SIGN, Tool.CROSS, Tool.CHECK, Tool.DOT -> detectTapGestures { tap ->
+                            onTap(index, norm(tap), tool)
+                        }
                         Tool.NONE -> Unit
                     }
                 },
@@ -334,12 +422,13 @@ private fun EditablePage(
                 if (mark.page != index) continue
                 when (mark) {
                     is StrokeMark -> for (i in 1 until mark.points.size) {
-                        drawLine(Color.Black, at(mark.points[i - 1]), at(mark.points[i]), strokeWidth = 3f)
+                        drawLine(Color(mark.argb), at(mark.points[i - 1]), at(mark.points[i]), strokeWidth = mark.width)
                     }
+                    is ShapeMark -> drawShape(mark.kind, at(mark.at), at(mark.to), Color(mark.argb), mark.width, w)
                     is TextMark -> drawContext.canvas.nativeCanvas.drawText(
                         mark.text, at(mark.at).x, at(mark.at).y,
                         Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                            color = android.graphics.Color.BLACK
+                            color = mark.argb
                             textSize = 16.dp.toPx()
                         },
                     )
@@ -358,10 +447,38 @@ private fun EditablePage(
                     }
                 }
             }
-            for (i in 1 until live.size) {
-                drawLine(Color.Red, at(live[i - 1]), at(live[i]), strokeWidth = 3f)
-            }
+            for (i in 1 until live.size) drawLine(Color(argb), at(live[i - 1]), at(live[i]), strokeWidth = width)
+            val a = rectFrom
+            val b = rectTo
+            if (a != null && b != null) drawShape(Tool.RECT, at(a), at(b), Color(argb), width, w)
         }
+    }
+}
+
+/** Draws a cross, check mark, dot or rectangle. Symbols are sized relative to the page width. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawShape(
+    kind: Tool, at: Offset, to: Offset, color: Color, width: Float, pageWidth: Float,
+) {
+    val s = pageWidth * 0.03f
+    when (kind) {
+        Tool.CROSS -> {
+            drawLine(color, Offset(at.x - s, at.y - s), Offset(at.x + s, at.y + s), strokeWidth = width)
+            drawLine(color, Offset(at.x + s, at.y - s), Offset(at.x - s, at.y + s), strokeWidth = width)
+        }
+        Tool.CHECK -> {
+            drawLine(color, Offset(at.x - s, at.y), Offset(at.x - s / 3, at.y + s), strokeWidth = width)
+            drawLine(color, Offset(at.x - s / 3, at.y + s), Offset(at.x + s, at.y - s), strokeWidth = width)
+        }
+        Tool.DOT -> drawCircle(color, radius = width * 2, center = at)
+        Tool.RECT -> {
+            val left = minOf(at.x, to.x)
+            val top = minOf(at.y, to.y)
+            val size = Size(kotlin.math.abs(to.x - at.x), kotlin.math.abs(to.y - at.y))
+            drawRoundRect(color, topLeft = Offset(left, top), size = size,
+                cornerRadius = CornerRadius(width * 3),
+                style = Stroke(width = width))
+        }
+        else -> Unit
     }
 }
 
@@ -371,9 +488,7 @@ private fun TextEntryDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add text") },
-        text = {
-            OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("Text") }, singleLine = false)
-        },
+        text = { OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("Text") }) },
         confirmButton = { Button(onClick = { onConfirm(text) }) { Text("Add") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
@@ -390,10 +505,7 @@ private fun SignatureDialog(onDismiss: () -> Unit, onConfirm: (List<List<Offset>
         title = { Text("Draw your signature") },
         text = {
             Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .background(Color.White)
+                Modifier.fillMaxWidth().height(180.dp).background(Color.White)
                     .onSizeChanged { area = it }
                     .pointerInput(Unit) {
                         detectDragGestures(
@@ -447,35 +559,61 @@ private fun buildEdited(doc: OpenDoc, marks: List<Mark>): ByteArray = synchroniz
         doc.renderer.openPage(index).use { page ->
             val wPt = page.width
             val hPt = page.height
-            val scale = 2
-            val bmp = Bitmap.createBitmap(wPt * scale, hPt * scale, Bitmap.Config.ARGB_8888)
+            val bmp = Bitmap.createBitmap(wPt * 2, hPt * 2, Bitmap.Config.ARGB_8888)
             bmp.eraseColor(android.graphics.Color.WHITE)
             page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
             val out = pdf.startPage(PdfDocument.PageInfo.Builder(wPt, hPt, index + 1).create())
             out.canvas.drawBitmap(bmp, null, RectF(0f, 0f, wPt.toFloat(), hPt.toFloat()), null)
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.BLACK
-                strokeWidth = 1.5f
-            }
             val wf = wPt.toFloat()
             val hf = hPt.toFloat()
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
             for (mark in marks) {
                 if (mark.page != index) continue
                 when (mark) {
                     is StrokeMark -> {
+                        paint.color = mark.argb
+                        paint.strokeWidth = mark.width
                         paint.style = Paint.Style.STROKE
                         for (i in 1 until mark.points.size) {
                             out.canvas.drawLine(mark.points[i - 1].x * wf, mark.points[i - 1].y * hf,
                                 mark.points[i].x * wf, mark.points[i].y * hf, paint)
                         }
                     }
+                    is ShapeMark -> {
+                        paint.color = mark.argb
+                        paint.strokeWidth = mark.width
+                        paint.style = Paint.Style.STROKE
+                        val ax = mark.at.x * wf; val ay = mark.at.y * hf
+                        val bx = mark.to.x * wf; val by = mark.to.y * hf
+                        val s = wf * 0.03f
+                        when (mark.kind) {
+                            Tool.CROSS -> {
+                                out.canvas.drawLine(ax - s, ay - s, ax + s, ay + s, paint)
+                                out.canvas.drawLine(ax + s, ay - s, ax - s, ay + s, paint)
+                            }
+                            Tool.CHECK -> {
+                                out.canvas.drawLine(ax - s, ay, ax - s / 3, ay + s, paint)
+                                out.canvas.drawLine(ax - s / 3, ay + s, ax + s, ay - s, paint)
+                            }
+                            Tool.DOT -> {
+                                paint.style = Paint.Style.FILL
+                                out.canvas.drawCircle(ax, ay, mark.width * 2, paint)
+                            }
+                            Tool.RECT -> out.canvas.drawRoundRect(
+                                minOf(ax, bx), minOf(ay, by), maxOf(ax, bx), maxOf(ay, by),
+                                mark.width * 3, mark.width * 3, paint)
+                            else -> Unit
+                        }
+                    }
                     is TextMark -> {
                         paint.style = Paint.Style.FILL
+                        paint.color = mark.argb
                         paint.textSize = 12f
                         out.canvas.drawText(mark.text, mark.at.x * wf, mark.at.y * hf, paint)
                     }
                     is SignMark -> {
                         paint.style = Paint.Style.STROKE
+                        paint.strokeWidth = 1.5f
                         paint.color = android.graphics.Color.rgb(26, 35, 126)
                         val ox = mark.at.x * wf
                         val oy = mark.at.y * hf
@@ -485,7 +623,6 @@ private fun buildEdited(doc: OpenDoc, marks: List<Mark>): ByteArray = synchroniz
                             out.canvas.drawLine(ox + stroke[i - 1].x * boxW, oy + stroke[i - 1].y * boxH,
                                 ox + stroke[i].x * boxW, oy + stroke[i].y * boxH, paint)
                         }
-                        paint.color = android.graphics.Color.BLACK
                     }
                 }
             }
