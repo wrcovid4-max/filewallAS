@@ -185,7 +185,6 @@ fun SecurityScreen(
             }
         }
 
-        item { HideAppsSection() }
 
         item {
             var allowAll by remember { mutableStateOf(com.filewall.data.ai.AiConsent.allAllowed(driveContext)) }
