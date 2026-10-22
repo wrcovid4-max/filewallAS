@@ -24,3 +24,6 @@ rootProject.name = "FileWall"
 include(":app")
 include(":wear")
 include(":shared")
+
+include(":filewall-kit")
+project(":filewall-kit").projectDir = file("libs/filewall-kit")

@@ -90,7 +90,8 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
     val switcherScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
         FileWallScreens(container, Modifier.fillMaxSize())
-        com.filewall.ui.language.LanguageSwitcher(
+        com.wrcovid.kit.language.LanguageSwitcher(
+            restartBody = androidx.compose.ui.res.stringResource(com.filewall.R.string.language_restart_body),
             onLanguageSaved = { tag -> switcherScope.launch { container.settings.setLanguage(tag) } },
             modifier = Modifier
                 .align(androidx.compose.ui.Alignment.TopEnd)
