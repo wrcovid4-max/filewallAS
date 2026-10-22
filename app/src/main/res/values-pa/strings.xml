@@ -210,6 +210,6 @@
     <string name="language_name_fa">ਫ਼ਾਰਸੀ</string>
     <string name="language_name_pa">ਪੰਜਾਬੀ</string>
     <string name="language_restart_title">ਭਾਸ਼ਾ ਬਦਲਣ ਲਈ ਰੀਸਟਾਰਟ ਕਰੀਏ?</string>
-    <string name="language_restart_body">ਐਪ ਰੀਸਟਾਰਟ ਹੋ ਕੇ %1$s ਵਿੱਚ ਬਦਲ ਜਾਵੇਗੀ। ਤੁਹਾਡੀਆਂ ਰਸੀਦਾਂ, ਡਰਾਫਟ ਅਤੇ ਸੈਟਿੰਗਾਂ ਬਣੀਆਂ ਰਹਿਣਗੀਆਂ।</string>
+    <string name="language_restart_body">ਐਪ %1$s ਵਿੱਚ ਬਦਲਣ ਲਈ ਮੁੜ ਸ਼ੁਰੂ ਹੋਵੇਗੀ। ਤੁਹਾਡੀਆਂ ਫ਼ਾਈਲਾਂ ਅਤੇ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਜਾਣਗੀਆਂ।</string>
     <string name="action_restart">ਰੀਸਟਾਰਟ ਕਰੋ</string>
 </resources>

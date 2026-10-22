@@ -211,6 +211,6 @@
     <string name="language_name_pa">پنجابی</string>
     <string name="language_name_pa_pk">پنجابی (پاکستان)</string>
     <string name="language_restart_title">زبان بدلن لئی ری سٹارٹ کرو؟</string>
-    <string name="language_restart_body">ایپ ری سٹارٹ ہو کے %1$s وچ بدل جائے گی۔ تہاڈیاں رسیداں، ڈرافٹ تے سیٹنگز سانبھی رہن گیاں۔</string>
+    <string name="language_restart_body">ایپ %1$s وچ بدلن لئی مڑ شروع ہووے گی۔ تہاڈیاں فائلاں تے سیٹنگاں محفوظ رہن گیاں۔</string>
     <string name="action_restart">ری سٹارٹ کرو</string>
 </resources>

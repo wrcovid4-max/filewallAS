@@ -209,6 +209,6 @@
     <string name="language_name_zh_tw">چینی سنتی</string>
     <string name="language_name_fa">فارسی</string>
     <string name="language_restart_title">برای تغییر زبان راه‌اندازی مجدد شود؟</string>
-    <string name="language_restart_body">برنامه دوباره راه‌اندازی می‌شود و به %1$s تغییر می‌کند. رسیدها، پیش‌نویس‌ها و تنظیمات شما حفظ می‌شوند.</string>
+    <string name="language_restart_body">برنامه برای تغییر به %1$s دوباره راه‌اندازی می‌شود. فایل‌ها و تنظیمات شما حفظ می‌شوند.</string>
     <string name="action_restart">راه‌اندازی مجدد</string>
 </resources>

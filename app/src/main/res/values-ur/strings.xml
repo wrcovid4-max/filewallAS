@@ -202,6 +202,6 @@
     <string name="language_name_en">انگریزی</string>
     <string name="language_name_ur">اردو</string>
     <string name="language_restart_title">زبان بدلنے کے لیے ایپ دوبارہ شروع کریں؟</string>
-    <string name="language_restart_body">زبان %1$s میں بدلنے کے لیے ایپ دوبارہ شروع ہو گی۔ آپ کی رسیدیں، ڈرافٹ اور ترتیبات محفوظ رہیں گی۔</string>
+    <string name="language_restart_body">ایپ %1$s میں تبدیل کرنے کے لیے دوبارہ شروع ہوگی۔ آپ کی فائلیں اور ترتیبات محفوظ رہیں گی۔</string>
     <string name="action_restart">دوبارہ شروع کریں</string>
 </resources>

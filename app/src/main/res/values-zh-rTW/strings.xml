@@ -208,6 +208,6 @@
     <string name="language_name_es">西班牙語</string>
     <string name="language_name_zh_tw">繁體中文</string>
     <string name="language_restart_title">重啟以切換語言？</string>
-    <string name="language_restart_body">應用將重啟並切換為%1$s。您的收據、草稿和設定會保留。</string>
+    <string name="language_restart_body">應用程式將重新啟動以切換為%1$s。您的檔案和設定會被保留。</string>
     <string name="action_restart">重啟</string>
 </resources>

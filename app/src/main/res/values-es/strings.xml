@@ -207,6 +207,6 @@
     <string name="language_name_ar">Árabe</string>
     <string name="language_name_es">Español</string>
     <string name="language_restart_title">¿Reiniciar para cambiar el idioma?</string>
-    <string name="language_restart_body">La app se reiniciará y cambiará a %1$s. Tus recibos, borradores y ajustes se conservarán.</string>
+    <string name="language_restart_body">La app se reiniciará para cambiar a %1$s. Tus archivos y ajustes se conservan.</string>
     <string name="action_restart">Reiniciar</string>
 </resources>

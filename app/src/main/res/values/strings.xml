@@ -229,6 +229,6 @@
     <string name="language_name_pa">Punjabi</string>
     <string name="language_name_pa_pk">Punjabi (Pakistan)</string>
     <string name="language_restart_title">Restart to change language?</string>
-    <string name="language_restart_body">The app will restart to switch to %1$s. Your receipts, drafts and settings are kept.</string>
+    <string name="language_restart_body">The app will restart to switch to %1$s. Your files and settings are kept.</string>
     <string name="action_restart">Restart</string>
 </resources>
