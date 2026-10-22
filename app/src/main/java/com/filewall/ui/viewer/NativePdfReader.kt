@@ -1,5 +1,7 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.util.Log
 import android.graphics.Bitmap
 import androidx.core.graphics.createBitmap
