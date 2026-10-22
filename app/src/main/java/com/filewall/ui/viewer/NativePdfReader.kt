@@ -2,7 +2,7 @@ package com.filewall.ui.viewer
 
 import android.graphics.Bitmap
 import android.graphics.Paint
-import android.graphics.PdfRenderer
+import android.graphics.pdf.PdfRenderer
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import android.os.ParcelFileDescriptor
@@ -73,6 +73,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
