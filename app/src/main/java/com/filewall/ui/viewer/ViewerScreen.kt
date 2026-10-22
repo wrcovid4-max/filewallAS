@@ -277,7 +277,7 @@ fun ViewerScreen(
                 Row(
                     Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(16.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = if (item.isPdf) 96.dp else 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (zoomable) {

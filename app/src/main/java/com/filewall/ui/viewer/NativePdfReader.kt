@@ -1,5 +1,8 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import android.util.Log
@@ -143,6 +146,10 @@ fun NativePdfReader(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    // Render at twice the screen width, so pages stay sharp when zoomed (capped to protect memory).
+    val renderWidth = with(LocalDensity.current) {
+        (LocalConfiguration.current.screenWidthDp.dp.toPx() * 2f).toInt().coerceIn(1080, 2048)
+    }
     var layout by rememberSaveable(item.id) { mutableIntStateOf(2) }        // 0 single, 1 two pages, 2 continuous
     var tool by rememberSaveable(item.id) { mutableStateOf(Tool.NONE) }
     var panelOpen by rememberSaveable(item.id) { mutableStateOf(false) }  // the Acrobat-style second toolbar
@@ -173,7 +180,7 @@ fun NativePdfReader(
 
     Column(modifier.fillMaxSize().background(Color(0xFF202020))) {
         // Top: page layout.
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
             LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
             LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
             LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
@@ -186,6 +193,7 @@ fun NativePdfReader(
                     textAlign = TextAlign.Center, modifier = Modifier.padding(32.dp))
                 is Loaded.Ready -> PagesView(
                     doc = state.doc,
+                    renderWidth = renderWidth,
                     layout = layout,
                     tool = tool,
                     argb = argb,
@@ -221,7 +229,7 @@ fun NativePdfReader(
         // Acrobat-style tools take its place (undo and save stay within reach).
         if (!panelOpen) {
             Row(
-                Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).padding(vertical = 6.dp),
+                Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).navigationBarsPadding().padding(vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -240,7 +248,7 @@ fun NativePdfReader(
             }
         } else {
             Row(
-                Modifier.fillMaxWidth().background(Color(0xFF2B2B2B)).padding(vertical = 4.dp),
+                Modifier.fillMaxWidth().background(Color(0xFF2B2B2B)).navigationBarsPadding().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -337,6 +345,7 @@ private fun ToolIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
 @Composable
 private fun PagesView(
     doc: OpenDoc,
+    renderWidth: Int,
     layout: Int,
     tool: Tool,
     argb: Int,
@@ -347,7 +356,7 @@ private fun PagesView(
     onTap: (Int, Offset, Tool) -> Unit,
 ) {
     val page: @Composable (Int, Modifier) -> Unit = { index, pageModifier ->
-        EditablePage(doc, index, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
+        EditablePage(doc, index, renderWidth, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
     }
     when (layout) {
         0 -> LazyRow(Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
@@ -376,6 +385,7 @@ private fun PagesView(
 private fun EditablePage(
     doc: OpenDoc,
     index: Int,
+    renderWidth: Int,
     tool: Tool,
     argb: Int,
     width: Float,
@@ -385,9 +395,9 @@ private fun EditablePage(
     onTap: (Int, Offset, Tool) -> Unit,
     modifier: Modifier,
 ) {
-    val render by produceState<PageRender>(PageRender.Loading, doc, index, RENDER_WIDTH) {
+    val render by produceState<PageRender>(PageRender.Loading, doc, index, renderWidth) {
         value = withContext(Dispatchers.IO) {
-            renderPage(doc, index, RENDER_WIDTH)?.let { PageRender.Ready(it) } ?: PageRender.Failed
+            renderPage(doc, index, renderWidth)?.let { PageRender.Ready(it) } ?: PageRender.Failed
         }
     }
     val bitmap = (render as? PageRender.Ready)?.bitmap
@@ -574,11 +584,11 @@ private fun SignatureDialog(onDismiss: () -> Unit, onConfirm: (List<List<Offset>
 }
 
 /** Renders one page to a bitmap, one page at a time (PdfRenderer allows a single open page). */
-private fun renderPage(doc: OpenDoc, index: Int, RENDER_WIDTH: Int): Bitmap? = synchronized(doc.renderer) {
+private fun renderPage(doc: OpenDoc, index: Int, renderWidth: Int): Bitmap? = synchronized(doc.renderer) {
     runCatching {
         doc.renderer.openPage(index).use { page ->
-            val heightPx = (RENDER_WIDTH * page.height / page.width.toFloat()).toInt().coerceAtLeast(1)
-            createBitmap(RENDER_WIDTH, heightPx, Bitmap.Config.ARGB_8888).apply {
+            val heightPx = (renderWidth * page.height / page.width.toFloat()).toInt().coerceAtLeast(1)
+            createBitmap(renderWidth, heightPx, Bitmap.Config.ARGB_8888).apply {
                 eraseColor(android.graphics.Color.WHITE)
                 page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             }
