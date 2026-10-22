@@ -199,4 +199,10 @@
     <string name="restore_ok">已恢复 %1$d 项</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">转换</string>
+    <string name="language_name_en">英文</string>
+    <string name="language_name_ur">乌尔都语</string>
+    <string name="language_name_zh">中文</string>
+    <string name="language_restart_title">重启以切换语言？</string>
+    <string name="language_restart_body">应用将重启并切换为%1$s。您的收据、草稿和设置会保留。</string>
+    <string name="action_restart">重启</string>
 </resources>

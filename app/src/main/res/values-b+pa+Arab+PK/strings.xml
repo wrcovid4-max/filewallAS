@@ -199,4 +199,18 @@
     <string name="restore_ok">%1$d آئٹم بحال ہوئے</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">بدلو</string>
+    <string name="language_name_en">انگریزی</string>
+    <string name="language_name_en_us">انگریزی (امریکہ)</string>
+    <string name="language_name_en_nz">انگریزی (نیوزی لینڈ)</string>
+    <string name="language_name_ur">اردو</string>
+    <string name="language_name_zh">چینی</string>
+    <string name="language_name_ar">عربی</string>
+    <string name="language_name_es">ہسپانوی</string>
+    <string name="language_name_zh_tw">روایتی چینی</string>
+    <string name="language_name_fa">فارسی</string>
+    <string name="language_name_pa">پنجابی</string>
+    <string name="language_name_pa_pk">پنجابی (پاکستان)</string>
+    <string name="language_restart_title">زبان بدلن لئی ری سٹارٹ کرو؟</string>
+    <string name="language_restart_body">ایپ ری سٹارٹ ہو کے %1$s وچ بدل جائے گی۔ تہاڈیاں رسیداں، ڈرافٹ تے سیٹنگز سانبھی رہن گیاں۔</string>
+    <string name="action_restart">ری سٹارٹ کرو</string>
 </resources>

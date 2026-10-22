@@ -38,11 +38,7 @@ import kotlinx.coroutines.launch
  * [FragmentActivity] rather than ComponentActivity because BiometricPrompt needs a fragment
  * host, and the vault's unlock path leans on it.
  */
-class MainActivity : FragmentActivity() {
-
-    override fun attachBaseContext(newBase: android.content.Context) {
-        super.attachBaseContext(com.filewall.ui.common.AppLanguage.wrap(newBase))
-    }
+class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
     private val container by lazy { (application as FileWallApp).container }
 

@@ -199,4 +199,17 @@
     <string name="restore_ok">%1$d ਆਈਟਮ(ਾਂ) ਬਹਾਲ ਹੋਈਆਂ</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">ਬਦਲੋ</string>
+    <string name="language_name_en">ਅੰਗਰੇਜ਼ੀ</string>
+    <string name="language_name_en_us">ਅੰਗਰੇਜ਼ੀ (ਅਮਰੀਕਾ)</string>
+    <string name="language_name_en_nz">ਅੰਗਰੇਜ਼ੀ (ਨਿਊਜ਼ੀਲੈਂਡ)</string>
+    <string name="language_name_ur">ਉਰਦੂ</string>
+    <string name="language_name_zh">ਚੀਨੀ</string>
+    <string name="language_name_ar">ਅਰਬੀ</string>
+    <string name="language_name_es">ਸਪੇਨੀ</string>
+    <string name="language_name_zh_tw">ਰਵਾਇਤੀ ਚੀਨੀ</string>
+    <string name="language_name_fa">ਫ਼ਾਰਸੀ</string>
+    <string name="language_name_pa">ਪੰਜਾਬੀ</string>
+    <string name="language_restart_title">ਭਾਸ਼ਾ ਬਦਲਣ ਲਈ ਰੀਸਟਾਰਟ ਕਰੀਏ?</string>
+    <string name="language_restart_body">ਐਪ ਰੀਸਟਾਰਟ ਹੋ ਕੇ %1$s ਵਿੱਚ ਬਦਲ ਜਾਵੇਗੀ। ਤੁਹਾਡੀਆਂ ਰਸੀਦਾਂ, ਡਰਾਫਟ ਅਤੇ ਸੈਟਿੰਗਾਂ ਬਣੀਆਂ ਰਹਿਣਗੀਆਂ।</string>
+    <string name="action_restart">ਰੀਸਟਾਰਟ ਕਰੋ</string>
 </resources>

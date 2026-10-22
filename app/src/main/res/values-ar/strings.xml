@@ -199,4 +199,11 @@
     <string name="restore_ok">تمت استعادة %1$d عنصر</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">تحويل</string>
+    <string name="language_name_en">الإنجليزية</string>
+    <string name="language_name_ur">الأردية</string>
+    <string name="language_name_zh">الصينية</string>
+    <string name="language_name_ar">العربية</string>
+    <string name="language_restart_title">إعادة التشغيل لتغيير اللغة؟</string>
+    <string name="language_restart_body">سيُعاد تشغيل التطبيق ويتغير إلى %1$s. ستبقى إيصالاتك ومسوداتك وإعداداتك كما هي.</string>
+    <string name="action_restart">إعادة التشغيل</string>
 </resources>

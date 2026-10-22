@@ -199,4 +199,9 @@
     <string name="restore_ok">%1$d آئٹم(ز) بحال ہو گئے</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">تبدیل کریں</string>
+    <string name="language_name_en">انگریزی</string>
+    <string name="language_name_ur">اردو</string>
+    <string name="language_restart_title">زبان بدلنے کے لیے ایپ دوبارہ شروع کریں؟</string>
+    <string name="language_restart_body">زبان %1$s میں بدلنے کے لیے ایپ دوبارہ شروع ہو گی۔ آپ کی رسیدیں، ڈرافٹ اور ترتیبات محفوظ رہیں گی۔</string>
+    <string name="action_restart">دوبارہ شروع کریں</string>
 </resources>

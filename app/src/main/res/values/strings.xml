@@ -217,4 +217,18 @@
     <string name="restore_ok">Restored %1$d item(s)</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">Convert</string>
+    <string name="language_name_en">English</string>
+    <string name="language_name_en_us">English (US)</string>
+    <string name="language_name_en_nz">English (NZ)</string>
+    <string name="language_name_ur">Urdu</string>
+    <string name="language_name_zh">Chinese</string>
+    <string name="language_name_ar">Arabic</string>
+    <string name="language_name_es">Spanish</string>
+    <string name="language_name_zh_tw">Chinese Traditional</string>
+    <string name="language_name_fa">Persian</string>
+    <string name="language_name_pa">Punjabi</string>
+    <string name="language_name_pa_pk">Punjabi (Pakistan)</string>
+    <string name="language_restart_title">Restart to change language?</string>
+    <string name="language_restart_body">The app will restart to switch to %1$s. Your receipts, drafts and settings are kept.</string>
+    <string name="action_restart">Restart</string>
 </resources>

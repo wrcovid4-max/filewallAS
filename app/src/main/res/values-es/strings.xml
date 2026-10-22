@@ -199,4 +199,14 @@
     <string name="restore_ok">Se restauraron %1$d elemento(s)</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">Convertir</string>
+    <string name="language_name_en">Inglés</string>
+    <string name="language_name_en_us">Inglés (EE. UU.)</string>
+    <string name="language_name_en_nz">Inglés (NZ)</string>
+    <string name="language_name_ur">Urdu</string>
+    <string name="language_name_zh">Chino</string>
+    <string name="language_name_ar">Árabe</string>
+    <string name="language_name_es">Español</string>
+    <string name="language_restart_title">¿Reiniciar para cambiar el idioma?</string>
+    <string name="language_restart_body">La app se reiniciará y cambiará a %1$s. Tus recibos, borradores y ajustes se conservarán.</string>
+    <string name="action_restart">Reiniciar</string>
 </resources>

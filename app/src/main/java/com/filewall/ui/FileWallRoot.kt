@@ -89,11 +89,11 @@ private sealed interface ViewerDialog {
 fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
     androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
         FileWallScreens(container, Modifier.fillMaxSize())
-        com.filewall.ui.common.LanguageGlobe(
+        com.filewall.ui.language.LanguageSwitcher(
             Modifier
                 .align(androidx.compose.ui.Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(end = 4.dp),
+                .padding(end = 8.dp, top = 4.dp),
         )
     }
 }

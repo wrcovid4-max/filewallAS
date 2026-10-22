@@ -199,4 +199,15 @@
     <string name="restore_ok">已還原 %1$d 項</string>
     <string name="operation_failed">%1$s</string>
     <string name="convert_tab">轉換</string>
+    <string name="language_name_en">英文</string>
+    <string name="language_name_en_us">英語（美國）</string>
+    <string name="language_name_en_nz">英語（紐西蘭）</string>
+    <string name="language_name_ur">烏爾都語</string>
+    <string name="language_name_zh">中文</string>
+    <string name="language_name_ar">阿拉伯語</string>
+    <string name="language_name_es">西班牙語</string>
+    <string name="language_name_zh_tw">繁體中文</string>
+    <string name="language_restart_title">重啟以切換語言？</string>
+    <string name="language_restart_body">應用將重啟並切換為%1$s。您的收據、草稿和設定會保留。</string>
+    <string name="action_restart">重啟</string>
 </resources>
