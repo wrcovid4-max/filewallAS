@@ -347,7 +347,7 @@ private fun PagesView(
     onTap: (Int, Offset, Tool) -> Unit,
 ) {
     val page: @Composable (Int, Modifier) -> Unit = { index, pageModifier ->
-        EditablePage(doc, index, RENDER_WIDTH, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
+        EditablePage(doc, index, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
     }
     when (layout) {
         0 -> LazyRow(Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
