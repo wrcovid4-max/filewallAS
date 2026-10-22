@@ -86,6 +86,19 @@ private sealed interface ViewerDialog {
 
 @Composable
 fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
+        FileWallScreens(container, Modifier.fillMaxSize())
+        com.filewall.ui.common.LanguageGlobe(
+            Modifier
+                .align(androidx.compose.ui.Alignment.TopEnd)
+                .androidx.compose.foundation.layout.statusBarsPadding()
+                .padding(end = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun FileWallScreens(container: AppContainer, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 

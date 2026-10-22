@@ -40,6 +40,10 @@ import kotlinx.coroutines.launch
  */
 class MainActivity : FragmentActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.filewall.ui.common.AppLanguage.wrap(newBase))
+    }
+
     private val container by lazy { (application as FileWallApp).container }
 
     private val notificationPermission =
