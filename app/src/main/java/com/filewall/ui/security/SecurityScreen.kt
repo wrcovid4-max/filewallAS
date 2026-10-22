@@ -161,6 +161,8 @@ fun SecurityScreen(
     ) {
         item { SecurityHero() }
 
+        item { HideAppsCard() }
+
         item {
             Row(
                 Modifier.fillMaxWidth(),
