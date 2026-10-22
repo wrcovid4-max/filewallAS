@@ -161,8 +161,6 @@ fun SecurityScreen(
     ) {
         item { SecurityHero() }
 
-        item { HideAppsCard() }
-
         item {
             Row(
                 Modifier.fillMaxWidth(),
@@ -173,6 +171,9 @@ fun SecurityScreen(
                 }
             }
         }
+
+        item { HideAppsCard() }
+
 
         item {
             Box {
@@ -796,8 +797,6 @@ fun SecurityScreen(
             }
         }
 
-        item { AboutLinks() }
-
         item {
             Text(
                 stringResourceSafe(R.string.copyright),
@@ -809,6 +808,9 @@ fun SecurityScreen(
                     .padding(vertical = 12.dp),
             )
         }
+
+        item { AboutLinks() }
+
     }
 
     prompt?.let { current ->
