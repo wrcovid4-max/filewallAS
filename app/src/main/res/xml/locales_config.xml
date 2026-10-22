@@ -7,4 +7,6 @@
     <locale android:name="fa"/>
     <locale android:name="zh"/>
     <locale android:name="zh-TW"/>
+    <locale android:name="pa"/>
+    <locale android:name="pa-Arab-PK"/>
 </locale-config>
