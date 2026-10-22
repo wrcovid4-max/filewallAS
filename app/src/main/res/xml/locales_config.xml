@@ -5,4 +5,6 @@
     <locale android:name="ur"/>
     <locale android:name="ar"/>
     <locale android:name="fa"/>
+    <locale android:name="zh"/>
+    <locale android:name="zh-TW"/>
 </locale-config>
