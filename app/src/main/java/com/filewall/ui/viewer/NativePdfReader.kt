@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.AlertDialog
@@ -193,31 +195,6 @@ fun NativePdfReader(
             }
         }
 
-        // The Acrobat-style second toolbar, shown when Draw or Fill & Sign is pressed.
-        if (panelOpen) {
-            Row(
-                Modifier.fillMaxWidth().background(Color(0xFF2B2B2B)).padding(vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ToolIcon(Icons.Filled.Edit, "Pencil", tool == Tool.DRAW) { tool = toggle(tool, Tool.DRAW) }
-                IconButton(onClick = { colorIndex = (colorIndex + 1) % INK_COLORS.size }) {
-                    Box(Modifier.size(22.dp).background(Color(INK_COLORS[colorIndex]), CircleShape))
-                }
-                IconButton(onClick = { widthIndex = (widthIndex + 1) % INK_WIDTHS.size }) {
-                    Icon(Icons.Filled.AutoFixHigh, "Line thickness", tint = Color.White)
-                }
-                ToolIcon(Icons.Filled.Edit, "Add text", tool == Tool.TEXT) { tool = toggle(tool, Tool.TEXT) }
-                ToolIcon(Icons.Filled.Close, "Cross", tool == Tool.CROSS) { tool = toggle(tool, Tool.CROSS) }
-                ToolIcon(Icons.Filled.Check, "Check", tool == Tool.CHECK) { tool = toggle(tool, Tool.CHECK) }
-                ToolIcon(Icons.Filled.FiberManualRecord, "Dot", tool == Tool.DOT) { tool = toggle(tool, Tool.DOT) }
-                ToolIcon(Icons.Filled.CropSquare, "Rectangle", tool == Tool.RECT) { tool = toggle(tool, Tool.RECT) }
-                IconButton(onClick = { panelOpen = false; tool = Tool.NONE }) {
-                    Icon(Icons.Filled.Close, "Close toolbar", tint = Color(0xFFB0BEC5))
-                }
-            }
-        }
-
         // Hint for the active tool.
         val hint = when (tool) {
             Tool.DRAW -> "Drag on a page to draw."
@@ -232,34 +209,53 @@ fun NativePdfReader(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         }
 
-        // The main bar: Draw, Fill & Sign, undo, save.
-        Row(
-            Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ToolIcon(Icons.Filled.Brush, "Draw", panelOpen && tool == Tool.DRAW) {
-                panelOpen = true
-                tool = if (tool == Tool.DRAW) Tool.NONE else Tool.DRAW
-                if (tool == Tool.NONE) panelOpen = false
-            }
-            ToolIcon(Icons.Filled.DriveFileRenameOutline, "Fill & Sign", panelOpen && tool == Tool.SIGN) {
-                panelOpen = true
-                tool = if (tool == Tool.SIGN) Tool.NONE else Tool.SIGN
-                if (tool == Tool.NONE) panelOpen = false
-            }
-            IconButton(onClick = { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }) {
-                Icon(Icons.Filled.Undo, "Undo", tint = Color.White)
-            }
-            IconButton(onClick = {
-                val ready = (loaded as? Loaded.Ready)?.doc ?: return@IconButton
-                scope.launch {
-                    status = "Saving…"
-                    val bytes = withContext(Dispatchers.IO) { buildEdited(ready, marks.toList()) }
-                    val base = item.name.substringBeforeLast('.')
-                    status = if (saveCopy(bytes, "$base (edited).pdf")) "Saved as a new file in the vault." else "Could not save."
+        // One bottom bar. Normally the main tools; when Draw or Fill & Sign is on, the
+        // Acrobat-style tools take its place (undo and save stay within reach).
+        if (!panelOpen) {
+            Row(
+                Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ToolIcon(Icons.Filled.Brush, "Draw", false) {
+                    panelOpen = true
+                    tool = Tool.DRAW
                 }
-            }) { Icon(Icons.Filled.Save, "Save as new file", tint = Color.White) }
+                ToolIcon(Icons.Filled.DriveFileRenameOutline, "Fill & Sign", false) {
+                    panelOpen = true
+                    tool = Tool.SIGN
+                }
+                IconButton(onClick = { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }) {
+                    Icon(Icons.Filled.Undo, "Undo", tint = Color.White)
+                }
+                SaveButton(loaded, marks, scope, item, saveCopy) { status = it }
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().background(Color(0xFF2B2B2B)).padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TinyTool(Icons.Filled.Edit, "Pencil", tool == Tool.DRAW) { tool = toggle(tool, Tool.DRAW) }
+                IconButton(onClick = { colorIndex = (colorIndex + 1) % INK_COLORS.size }, modifier = Modifier.size(32.dp)) {
+                    Box(Modifier.size(18.dp).background(Color(INK_COLORS[colorIndex]), CircleShape))
+                }
+                IconButton(onClick = { widthIndex = (widthIndex + 1) % INK_WIDTHS.size }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.AutoFixHigh, "Line thickness", tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                TinyTool(Icons.Filled.Title, "Add text", tool == Tool.TEXT) { tool = toggle(tool, Tool.TEXT) }
+                TinyTool(Icons.Filled.Close, "Cross", tool == Tool.CROSS) { tool = toggle(tool, Tool.CROSS) }
+                TinyTool(Icons.Filled.Check, "Check", tool == Tool.CHECK) { tool = toggle(tool, Tool.CHECK) }
+                TinyTool(Icons.Filled.FiberManualRecord, "Dot", tool == Tool.DOT) { tool = toggle(tool, Tool.DOT) }
+                TinyTool(Icons.Filled.CropSquare, "Rectangle", tool == Tool.RECT) { tool = toggle(tool, Tool.RECT) }
+                IconButton(onClick = { if (marks.isNotEmpty()) marks.removeAt(marks.lastIndex) }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.Undo, "Undo", tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                SaveButton(loaded, marks, scope, item, saveCopy) { status = it }
+                IconButton(onClick = { panelOpen = false; tool = Tool.NONE }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.Done, "Done", tint = Color(0xFFB39DDB), modifier = Modifier.size(18.dp))
+                }
+            }
         }
     }
 
@@ -281,6 +277,35 @@ fun NativePdfReader(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun TinyTool(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(32.dp)) {
+        Icon(icon, label, tint = if (selected) Color(0xFFB39DDB) else Color.White, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun SaveButton(
+    loaded: Loaded,
+    marks: List<Mark>,
+    scope: kotlinx.coroutines.CoroutineScope,
+    item: VaultItem,
+    saveCopy: suspend (ByteArray, String) -> Boolean,
+    setStatus: (String) -> Unit,
+) {
+    IconButton(onClick = {
+        val ready = (loaded as? Loaded.Ready)?.doc ?: return@IconButton
+        scope.launch {
+            setStatus("Saving…")
+            val bytes = withContext(Dispatchers.IO) { buildEdited(ready, marks.toList()) }
+            val base = item.name.substringBeforeLast('.')
+            setStatus(if (saveCopy(bytes, "$base (edited).pdf")) "Saved as a new file in the vault." else "Could not save.")
+        }
+    }, modifier = Modifier.size(32.dp)) {
+        Icon(Icons.Filled.Save, "Save as new file", tint = Color.White, modifier = Modifier.size(18.dp))
     }
 }
 
