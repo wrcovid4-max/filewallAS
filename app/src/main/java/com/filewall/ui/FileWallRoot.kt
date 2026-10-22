@@ -333,14 +333,11 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
                 )
             },
             pdfViewer = { pdfModifier, fullScreen, onFullScreenChange ->
-                com.filewall.ui.viewer.PdfJsViewer(
+                // PDFs open in the native renderer, which draws each page directly.
+                com.filewall.ui.viewer.VaultPdfViewer(
                     item = item,
                     decryptToCache = { container.repository.materialisePreview(it) },
                     modifier = pdfModifier,
-                    fullScreen = fullScreen,
-                    onFullScreenChange = onFullScreenChange,
-                    onClose = { viewerOpen = false },
-                    saveCopy = { bytes, name -> saveMarkedCopy(context, container, item, bytes, name) },
                 )
             },
             onClose = { viewerOpen = false },
