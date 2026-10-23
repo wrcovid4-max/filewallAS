@@ -257,14 +257,6 @@ fun SettingSwitchRow(
                     InfoIcon(title, description, Modifier.padding(start = 4.dp))
                 }
             }
-            if (description != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
         Switch(
             checked = checked,

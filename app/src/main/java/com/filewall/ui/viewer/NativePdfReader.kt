@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -144,9 +145,14 @@ fun NativePdfReader(
     item: VaultItem,
     decryptToCache: suspend (VaultItem) -> File,
     saveCopy: suspend (ByteArray, String) -> Boolean,
+    fullScreen: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    // Full screen hides the tools; a tap on the page brings them back, and another tap hides them.
+    var chromeVisible by remember(item.id) { mutableStateOf(true) }
+    LaunchedEffect(fullScreen) { chromeVisible = !fullScreen }
+    val chromeShown = !fullScreen || chromeVisible
     // Render at twice the screen width, so pages stay sharp when zoomed (capped to protect memory).
     val renderWidth = with(LocalDensity.current) {
         (LocalConfiguration.current.screenWidthDp.dp.toPx() * 2f).toInt().coerceIn(1080, 2048)
@@ -181,13 +187,18 @@ fun NativePdfReader(
 
     Column(modifier.fillMaxSize().background(Color(0xFF202020))) {
         // Top: page layout.
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
+        if (chromeShown) Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
             LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
             LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
             LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
         }
 
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.weight(1f).fillMaxWidth().pointerInput(fullScreen, tool) {
+                detectTapGestures { if (fullScreen && tool == Tool.NONE) chromeVisible = !chromeVisible }
+            },
+            contentAlignment = Alignment.Center,
+        ) {
             when (val state = loaded) {
                 Loaded.Loading -> CircularProgressIndicator(color = Color.White)
                 Loaded.Failed -> Text("This PDF could not be opened.", color = Color.White,
@@ -221,14 +232,14 @@ fun NativePdfReader(
             Tool.CROSS, Tool.CHECK, Tool.DOT -> "Tap a spot on a page to place it."
             Tool.NONE -> status
         }
-        if (hint.isNotBlank()) {
+        if (chromeShown && hint.isNotBlank()) {
             Text(hint, color = Color.White, style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         }
 
         // One bottom bar. Normally the main tools; when Draw or Fill & Sign is on, the
         // Acrobat-style tools take its place (undo and save stay within reach).
-        if (!panelOpen) {
+        if (chromeShown) if (!panelOpen) {
             Row(
                 Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).navigationBarsPadding().padding(vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,

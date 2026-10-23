@@ -797,6 +797,8 @@ fun SecurityScreen(
             }
         }
 
+        item { AboutLinks() }
+
         item {
             Text(
                 stringResourceSafe(R.string.copyright),
@@ -809,7 +811,6 @@ fun SecurityScreen(
             )
         }
 
-        item { AboutLinks() }
 
     }
 

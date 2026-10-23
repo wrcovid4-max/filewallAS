@@ -149,7 +149,7 @@ class VaultViewModel(
             emptyList()
         } else {
             allItems
-                .filter { item -> inSpecial || (openFolder?.let { item.folderId == it.id } ?: true) }
+                .filter { item -> inSpecial || (openFolder?.let { item.folderId == it.id } ?: (item.folderId == null)) }
                 .filter { item -> current.query.isBlank() || item.name.contains(current.query, ignoreCase = true) }
                 .sortedWith(comparatorFor(prefs.sortField, prefs.sortAscending))
         }

@@ -347,6 +347,7 @@ private fun FileWallScreens(container: AppContainer, modifier: Modifier = Modifi
                     item = item,
                     decryptToCache = { container.repository.materialisePreview(it) },
                     saveCopy = { bytes, name -> saveMarkedCopy(context, container, item, bytes, name) },
+                    fullScreen = fullScreen,
                     modifier = pdfModifier,
                 )
             },
