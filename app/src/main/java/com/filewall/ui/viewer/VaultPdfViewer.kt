@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import android.graphics.Color as AndroidColor
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
