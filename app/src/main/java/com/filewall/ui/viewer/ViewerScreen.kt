@@ -2,6 +2,9 @@ package com.filewall.ui.viewer
 
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.systemBars
 import com.filewall.ui.common.InfoIcon
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.rememberScrollState
@@ -173,8 +176,8 @@ fun ViewerScreen(
                     .height(
                         if (item.isPdf) {
                             androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp -
-                                androidx.compose.foundation.layout.WindowInsets.systemBars.asPaddingValues().calculateTopPadding() -
-                                androidx.compose.foundation.layout.WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+                                WindowInsets.systemBars.asPaddingValues().calculateTopPadding() -
+                                WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
                         } else {
                             androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.6f
                         }
