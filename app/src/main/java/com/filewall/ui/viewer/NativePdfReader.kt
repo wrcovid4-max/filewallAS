@@ -329,6 +329,8 @@ fun NativePdfReader(
                             else -> marks.add(ShapeMark(page, kind, at, at, argb, width))
                         }
                     },
+                    // With the top bar hidden, start the first page below the floating search/layout pill.
+                    topPadding = if (chromeShown) 8.dp else 60.dp,
                 )
             }
         }
@@ -526,15 +528,17 @@ private fun PagesView(
     onStroke: (Int, List<Offset>) -> Unit,
     onShape: (Int, Offset, Offset, Tool) -> Unit,
     onTap: (Int, Offset, Tool) -> Unit,
+    topPadding: androidx.compose.ui.unit.Dp = 8.dp,
 ) {
+    val pad = PaddingValues(start = 8.dp, end = 8.dp, top = topPadding, bottom = 72.dp)
     val page: @Composable (Int, Modifier) -> Unit = { index, pageModifier ->
         EditablePage(doc, index, renderWidth, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
     }
     when (layout) {
-        0 -> LazyRow(state = rowState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
+        0 -> LazyRow(state = rowState, modifier = Modifier.fillMaxSize(), contentPadding = pad) {
             items(doc.pageCount) { index -> page(index, Modifier.fillParentMaxWidth()) }
         }
-        1 -> LazyColumn(state = columnState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
+        1 -> LazyColumn(state = columnState, modifier = Modifier.fillMaxSize(), contentPadding = pad) {
             items((doc.pageCount + 1) / 2) { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val first = row * 2
@@ -544,7 +548,7 @@ private fun PagesView(
                 Spacer(Modifier.height(10.dp))
             }
         }
-        else -> LazyColumn(state = columnState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
+        else -> LazyColumn(state = columnState, modifier = Modifier.fillMaxSize(), contentPadding = pad) {
             items(doc.pageCount) { index ->
                 page(index, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))

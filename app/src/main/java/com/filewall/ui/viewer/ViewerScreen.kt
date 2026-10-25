@@ -2,9 +2,7 @@ package com.filewall.ui.viewer
 
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.BoxWithConstraints
 import com.filewall.ui.common.InfoIcon
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.rememberScrollState
@@ -124,6 +122,8 @@ fun ViewerScreen(
     }
 
     Surface(color = ViewerPurple, modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val stageHeight = maxHeight
         // A Column, not a Box overlay: the top bar, the content, and the details sheet are
         // siblings stacked top-to-bottom, so the sheet can never sit *on top of* the content
         // or the controls. Toggling fullscreen just removes the bar and sheet, and the
@@ -175,9 +175,10 @@ fun ViewerScreen(
                 Modifier
                     .height(
                         if (item.isPdf) {
-                            androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp -
-                                WindowInsets.systemBars.asPaddingValues().calculateTopPadding() -
-                                WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+                            // The PDF reader fills exactly the space the screen gives it. It pads for the
+                            // status and navigation bars itself, so nothing is subtracted here (doing so
+                            // left a blank band at the bottom and cut the last page short).
+                            stageHeight
                         } else {
                             androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.6f
                         }
@@ -284,8 +285,9 @@ fun ViewerScreen(
                     Modifier
                         .zIndex(1f)
                         .align(Alignment.BottomEnd)
-                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = if (item.isPdf) 96.dp else 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .then(if (item.isPdf) Modifier.navigationBarsPadding() else Modifier)
+                        .padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = if (item.isPdf) 72.dp else 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (zoomable) {
                         StageButton(
@@ -326,6 +328,7 @@ fun ViewerScreen(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -336,13 +339,13 @@ private fun StageButton(
 ) {
     Box(
         Modifier
-            .size(58.dp)
+            .size(44.dp)
             .clip(MaterialTheme.shapes.medium)
-            .background(Color.Black.copy(alpha = 0.55f)),
+            .background(Color.Black.copy(alpha = 0.40f)),
         contentAlignment = Alignment.Center,
     ) {
-        IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = description, tint = Color.White)
+        IconButton(onClick = onClick, modifier = Modifier.size(44.dp)) {
+            Icon(icon, contentDescription = description, tint = Color.White.copy(alpha = 0.9f))
         }
     }
 }
