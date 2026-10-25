@@ -402,11 +402,13 @@ fun NativePdfReader(
     }
 
     // Always on top, in every mode (including full screen): search and the page layouts.
+    // The app's language switcher (ENG) floats in the top-right corner of every screen, so this
+    // pill sits just to its left instead of underneath it.
     Row(
         Modifier
             .align(Alignment.TopEnd)
             .statusBarsPadding()
-            .padding(top = 4.dp, end = 8.dp)
+            .padding(top = 4.dp, end = 116.dp)
             .zIndex(1f)
             .background(Color(0xB3000000), RoundedCornerShape(50))
             .padding(horizontal = 4.dp),
