@@ -1,5 +1,6 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.navigationBarsPadding
 import com.filewall.ui.common.InfoIcon
 import androidx.compose.material.icons.filled.Lock
@@ -278,6 +279,7 @@ fun ViewerScreen(
                 // details sheet because the sheet is a separate row below this whole box.
                 Row(
                     Modifier
+                        .zIndex(1f)
                         .align(Alignment.BottomEnd)
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = if (item.isPdf) 96.dp else 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),

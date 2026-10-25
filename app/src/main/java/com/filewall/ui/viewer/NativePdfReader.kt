@@ -1,5 +1,17 @@
 package com.filewall.ui.viewer
 
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.tom_roush.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeOut
@@ -158,6 +170,15 @@ fun NativePdfReader(
     var chromeVisible by remember(item.id) { mutableStateOf(true) }
     LaunchedEffect(fullScreen) { chromeVisible = !fullScreen }
     val chromeShown = !fullScreen || chromeVisible
+    val context = LocalContext.current
+    val columnState = rememberLazyListState()
+    val rowState = rememberLazyListState()
+    var gotoOpen by remember { mutableStateOf(false) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var searching by remember { mutableStateOf(false) }
+    var results by remember { mutableStateOf<List<Pair<Int, String>>>(emptyList()) }
+    var pageTexts by remember(item.id) { mutableStateOf<List<String>?>(null) }
     // Render at twice the screen width, so pages stay sharp when zoomed (capped to protect memory).
     val renderWidth = with(LocalDensity.current) {
         (LocalConfiguration.current.screenWidthDp.dp.toPx() * 2f).toInt().coerceIn(1080, 2048)
@@ -190,14 +211,95 @@ fun NativePdfReader(
         onDispose { opened?.close() }
     }
 
+    val pageCount = (loaded as? Loaded.Ready)?.doc?.pageCount ?: 0
+    val currentPage = when (layout) {
+        0 -> rowState.firstVisibleItemIndex + 1
+        1 -> columnState.firstVisibleItemIndex * 2 + 1
+        else -> columnState.firstVisibleItemIndex + 1
+    }.coerceIn(1, maxOf(pageCount, 1))
+
+    fun goToPage(page: Int) {
+        val target = page.coerceIn(1, maxOf(pageCount, 1))
+        scope.launch {
+            when (layout) {
+                0 -> rowState.scrollToItem(target - 1)
+                1 -> columnState.scrollToItem((target - 1) / 2)
+                else -> columnState.scrollToItem(target - 1)
+            }
+        }
+    }
+
+    fun runSearch() {
+        val q = query.trim()
+        if (q.isEmpty()) {
+            results = emptyList()
+            return
+        }
+        scope.launch {
+            searching = true
+            PDFBoxResourceLoader.init(context.applicationContext)
+            val texts = pageTexts ?: withContext(Dispatchers.IO) {
+                extractPageTexts(decryptToCache(item))
+            }.also { pageTexts = it }
+            results = withContext(Dispatchers.Default) {
+                texts.mapIndexedNotNull { index, text ->
+                    val at = text.indexOf(q, ignoreCase = true)
+                    if (at < 0) null
+                    else (index + 1) to text.substring(maxOf(0, at - 30), minOf(text.length, at + q.length + 30)).replace('\n', ' ')
+                }
+            }
+            searching = false
+        }
+    }
+
     Column(modifier.fillMaxSize().background(Color(0xFF202020))) {
         // Top: page layout.
         AnimatedVisibility(visible = chromeShown, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
+            Text(
+                text = "$currentPage / ${maxOf(pageCount, 1)}",
+                color = Color.White,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { gotoOpen = true }
+                    .padding(start = 8.dp, top = 10.dp, bottom = 10.dp),
+            )
+            LayoutIcon(Icons.Filled.Search, "Search", searchOpen) { searchOpen = !searchOpen }
             LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
             LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
             LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
         }
+        }
+
+        if (searchOpen && chromeShown) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Search this document") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { runSearch() }),
+                )
+                TextButton(onClick = { runSearch() }) { Text("Find") }
+            }
+            if (searching) {
+                Text("Searching…", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 180.dp).background(Color(0xFF2B2B2B))) {
+                items(results) { (page, snippet) ->
+                    Text(
+                        text = "Page $page: $snippet",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { goToPage(page) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+            }
         }
 
         Box(
@@ -213,6 +315,8 @@ fun NativePdfReader(
                 is Loaded.Ready -> PagesView(
                     doc = state.doc,
                     renderWidth = renderWidth,
+                    columnState = columnState,
+                    rowState = rowState,
                     layout = layout,
                     tool = tool,
                     argb = argb,
@@ -296,6 +400,34 @@ fun NativePdfReader(
         }
     }
 
+    if (gotoOpen) {
+        var typed by remember { mutableStateOf(currentPage.toString()) }
+        AlertDialog(
+            onDismissRequest = { gotoOpen = false },
+            title = { Text("Go to page") },
+            text = {
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { typed = it.filter(Char::isDigit) },
+                    singleLine = true,
+                    label = { Text("1 – $pageCount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = {
+                        typed.toIntOrNull()?.let { goToPage(it) }
+                        gotoOpen = false
+                    }),
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    typed.toIntOrNull()?.let { goToPage(it) }
+                    gotoOpen = false
+                }) { Text("Go") }
+            },
+            dismissButton = { TextButton(onClick = { gotoOpen = false }) { Text("Cancel") } },
+        )
+    }
+
     pending?.let { p ->
         if (p.tool == Tool.TEXT) {
             TextEntryDialog(
@@ -367,6 +499,8 @@ private fun ToolIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
 private fun PagesView(
     doc: OpenDoc,
     renderWidth: Int,
+    columnState: LazyListState,
+    rowState: LazyListState,
     layout: Int,
     tool: Tool,
     argb: Int,
@@ -380,10 +514,10 @@ private fun PagesView(
         EditablePage(doc, index, renderWidth, tool, argb, width, marks, onStroke, onShape, onTap, pageModifier)
     }
     when (layout) {
-        0 -> LazyRow(Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
+        0 -> LazyRow(state = rowState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
             items(doc.pageCount) { index -> page(index, Modifier.fillParentMaxWidth()) }
         }
-        1 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
+        1 -> LazyColumn(state = columnState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
             items((doc.pageCount + 1) / 2) { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val first = row * 2
@@ -393,7 +527,7 @@ private fun PagesView(
                 Spacer(Modifier.height(10.dp))
             }
         }
-        else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
+        else -> LazyColumn(state = columnState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(8.dp)) {
             items(doc.pageCount) { index ->
                 page(index, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
@@ -700,3 +834,15 @@ private fun buildEdited(doc: OpenDoc, marks: List<Mark>): ByteArray = synchroniz
     pdf.close()
     bytes.toByteArray()
 }
+
+/** Extracts the text of every page, for search. Empty if the file can't be read as text. */
+private fun extractPageTexts(file: File): List<String> = runCatching {
+    PDDocument.load(file).use { document ->
+        val stripper = PDFTextStripper()
+        (1..document.numberOfPages).map { page ->
+            stripper.startPage = page
+            stripper.endPage = page
+            stripper.getText(document)
+        }
+    }
+}.getOrElse { emptyList() }
