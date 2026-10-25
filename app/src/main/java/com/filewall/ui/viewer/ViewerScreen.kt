@@ -99,6 +99,8 @@ fun ViewerScreen(
     var image by remember(item.id) { mutableStateOf<ImageBitmap?>(null) }
     var loading by remember(item.id) { mutableStateOf(item.category == FileCategory.PHOTO) }
     var detailsVisible by remember { mutableStateOf(true) }
+    // PDF only: false while the reader's tools are hidden, so the floating buttons hide with them.
+    var pdfToolsVisible by remember(item.id) { mutableStateOf(true) }
 
     var scale by remember(item.id) { mutableFloatStateOf(1f) }
     var offsetX by remember(item.id) { mutableFloatStateOf(0f) }
@@ -276,14 +278,14 @@ fun ViewerScreen(
                                 translationX = offsetX,
                                 translationY = offsetY,
                             ), !detailsVisible,
-                    ) { detailsVisible = !it }
+                    ) { pdfToolsVisible = it }
 
                     else -> NoPreview(onOpenExternally)
                 }
 
                 // Controls live inside the stage box, pinned bottom-right — always above the
                 // details sheet because the sheet is a separate row below this whole box.
-                Row(
+                if (!item.isPdf || pdfToolsVisible) Row(
                     Modifier
                         .zIndex(1f)
                         .align(Alignment.BottomEnd)

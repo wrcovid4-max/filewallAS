@@ -165,6 +165,7 @@ fun NativePdfReader(
     decryptToCache: suspend (VaultItem) -> File,
     saveCopy: suspend (ByteArray, String) -> Boolean,
     fullScreen: Boolean = false,
+    onToolsVisibleChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -172,6 +173,8 @@ fun NativePdfReader(
     var chromeVisible by remember(item.id) { mutableStateOf(true) }
     LaunchedEffect(fullScreen) { chromeVisible = !fullScreen }
     val chromeShown = !fullScreen || chromeVisible
+    // Lets the screen around the reader hide its own floating buttons together with these tools.
+    LaunchedEffect(chromeShown) { onToolsVisibleChange(chromeShown) }
     val context = LocalContext.current
     val columnState = rememberLazyListState()
     val rowState = rememberLazyListState()
@@ -329,8 +332,6 @@ fun NativePdfReader(
                             else -> marks.add(ShapeMark(page, kind, at, at, argb, width))
                         }
                     },
-                    // With the top bar hidden, start the first page below the floating search/layout pill.
-                    topPadding = if (chromeShown) 8.dp else 60.dp,
                 )
             }
         }
@@ -401,23 +402,27 @@ fun NativePdfReader(
         }
     }
 
-    // Always on top, in every mode (including full screen): search and the page layouts.
-    // The app's language switcher (ENG) floats in the top-right corner of every screen, so this
-    // pill sits just to its left instead of underneath it.
-    Row(
-        Modifier
-            .align(Alignment.TopEnd)
-            .statusBarsPadding()
-            .padding(top = 4.dp, end = 116.dp)
-            .zIndex(1f)
-            .background(Color(0xB3000000), RoundedCornerShape(50))
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    // Search and the page layouts float over the page, and go away with every other tool when the
+    // page is tapped in full screen. (The language switcher no longer shows over files.)
+    AnimatedVisibility(
+        visible = chromeShown,
+        modifier = Modifier.align(Alignment.TopEnd).zIndex(1f),
+        enter = fadeIn(),
+        exit = fadeOut(),
     ) {
-        LayoutIcon(Icons.Filled.Search, "Search", searchOpen) { searchOpen = !searchOpen }
-        LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
-        LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
-        LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
+        Row(
+            Modifier
+                .statusBarsPadding()
+                .padding(top = 4.dp, end = 8.dp)
+                .background(Color(0xB3000000), RoundedCornerShape(50))
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LayoutIcon(Icons.Filled.Search, "Search", searchOpen) { searchOpen = !searchOpen }
+            LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
+            LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
+            LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
+        }
     }
     }
 

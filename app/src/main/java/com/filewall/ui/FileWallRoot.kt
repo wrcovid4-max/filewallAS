@@ -80,9 +80,11 @@ private sealed interface ViewerDialog {
 @Composable
 fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
     val switcherScope = androidx.compose.runtime.rememberCoroutineScope()
+    // The language switcher belongs to the main tabs only; it stays out of the way of open files.
+    var fileOpen by remember { mutableStateOf(false) }
     androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
-        FileWallScreens(container, Modifier.fillMaxSize())
-        com.wrcovid.kit.language.LanguageSwitcher(
+        FileWallScreens(container, Modifier.fillMaxSize(), onFileOpenChange = { fileOpen = it })
+        if (!fileOpen) com.wrcovid.kit.language.LanguageSwitcher(
             restartBody = androidx.compose.ui.res.stringResource(com.filewall.R.string.language_restart_body),
             onLanguageSaved = { tag -> switcherScope.launch { container.settings.setLanguage(tag) } },
             modifier = Modifier
@@ -94,7 +96,11 @@ fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun FileWallScreens(container: AppContainer, modifier: Modifier = Modifier) {
+private fun FileWallScreens(
+    container: AppContainer,
+    modifier: Modifier = Modifier,
+    onFileOpenChange: (Boolean) -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -111,6 +117,7 @@ private fun FileWallScreens(container: AppContainer, modifier: Modifier = Modifi
     var tab by remember { mutableStateOf(Tab.VAULT) }
     var viewerItem by remember { mutableStateOf<VaultItem?>(null) }
     var viewerOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(viewerOpen) { onFileOpenChange(viewerOpen) }
     var showStorage by remember { mutableStateOf(false) }
     var showAi by remember { mutableStateOf(false) }
     val viewerProgress by animateFloatAsState(
@@ -341,13 +348,14 @@ private fun FileWallScreens(container: AppContainer, modifier: Modifier = Modifi
                     modifier = docModifier,
                 )
             },
-            pdfViewer = { pdfModifier, fullScreen, onFullScreenChange ->
+            pdfViewer = { pdfModifier, fullScreen, onToolsVisibleChange ->
                 // PDFs open in the native reader, with Draw, Add text, Sign, Undo and Save as new file.
                 com.filewall.ui.viewer.NativePdfReader(
                     item = item,
                     decryptToCache = { container.repository.materialisePreview(it) },
                     saveCopy = { bytes, name -> saveMarkedCopy(context, container, item, bytes, name) },
                     fullScreen = fullScreen,
+                    onToolsVisibleChange = onToolsVisibleChange,
                     modifier = pdfModifier,
                 )
             },
