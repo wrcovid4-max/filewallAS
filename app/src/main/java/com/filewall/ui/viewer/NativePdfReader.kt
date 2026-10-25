@@ -1,5 +1,7 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -252,7 +254,8 @@ fun NativePdfReader(
         }
     }
 
-    Column(modifier.fillMaxSize().background(Color(0xFF202020))) {
+    Box(modifier.fillMaxSize().background(Color(0xFF202020))) {
+    Column(Modifier.fillMaxSize()) {
         // Top: page layout.
         AnimatedVisibility(visible = chromeShown, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
@@ -264,10 +267,6 @@ fun NativePdfReader(
                     .clickable { gotoOpen = true }
                     .padding(start = 8.dp, top = 10.dp, bottom = 10.dp),
             )
-            LayoutIcon(Icons.Filled.Search, "Search", searchOpen) { searchOpen = !searchOpen }
-            LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
-            LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
-            LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
         }
         }
 
@@ -398,6 +397,24 @@ fun NativePdfReader(
             }
         }
         }
+    }
+
+    // Always on top, in every mode (including full screen): search and the page layouts.
+    Row(
+        Modifier
+            .align(Alignment.TopEnd)
+            .statusBarsPadding()
+            .padding(top = 4.dp, end = 8.dp)
+            .zIndex(1f)
+            .background(Color(0xB3000000), RoundedCornerShape(50))
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LayoutIcon(Icons.Filled.Search, "Search", searchOpen) { searchOpen = !searchOpen }
+        LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
+        LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
+        LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
+    }
     }
 
     if (gotoOpen) {
