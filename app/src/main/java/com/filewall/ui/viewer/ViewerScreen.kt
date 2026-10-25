@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import com.filewall.ui.common.InfoIcon
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.tween
@@ -33,11 +36,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.CircularProgressIndicator
@@ -123,7 +125,7 @@ fun ViewerScreen(
 
     Surface(color = ViewerPurple, modifier = modifier.fillMaxSize()) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-    val stageHeight = maxHeight
+    val stageHeight = this.maxHeight
         // A Column, not a Box overlay: the top bar, the content, and the details sheet are
         // siblings stacked top-to-bottom, so the sheet can never sit *on top of* the content
         // or the controls. Toggling fullscreen just removes the bar and sheet, and the
@@ -132,7 +134,7 @@ fun ViewerScreen(
         Column(
             Modifier
                 .fillMaxSize()
-                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                .verticalScroll(rememberScrollState()),
         ) {
             // -------------------------------------------------------- top bar
             // PDFs have their own bar with back, so this one (and its second back button) is hidden.
@@ -180,7 +182,7 @@ fun ViewerScreen(
                             // left a blank band at the bottom and cut the last page short).
                             stageHeight
                         } else {
-                            androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.6f
+                            LocalConfiguration.current.screenHeightDp.dp * 0.6f
                         }
                     )
                     .fillMaxWidth()
@@ -273,8 +275,8 @@ fun ViewerScreen(
                                 scaleY = animatedScale,
                                 translationX = offsetX,
                                 translationY = offsetY,
-                            ), !detailsVisible, { detailsVisible = !it }
-                    )
+                            ), !detailsVisible,
+                    ) { detailsVisible = !it }
 
                     else -> NoPreview(onOpenExternally)
                 }
@@ -333,7 +335,7 @@ fun ViewerScreen(
 
 @Composable
 private fun StageButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     description: String,
     onClick: () -> Unit,
 ) {
@@ -437,7 +439,7 @@ private fun ItemDetailsCard(
                 Text(stringResourceSafe(R.string.action_export), maxLines = 1)
             }
             OutlinedButton(onClick = onMove, modifier = Modifier.weight(1f)) {
-                Icon(Icons.Filled.DriveFileMove, null, Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.DriveFileMove, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResourceSafe(R.string.action_move), maxLines = 1)
             }
@@ -496,7 +498,7 @@ private fun DetailRow(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            textAlign = TextAlign.End,
             modifier = Modifier.weight(1f),
         )
     }
@@ -509,12 +511,12 @@ private fun NoPreview(onOpenExternally: () -> Unit) {
             text = stringResourceSafe(R.string.cannot_preview),
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 40.dp),
         )
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onOpenExternally) {
-            Icon(Icons.Filled.OpenInNew, null, Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(stringResourceSafe(R.string.open_externally))
         }
