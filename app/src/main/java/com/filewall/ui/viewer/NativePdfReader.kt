@@ -1,5 +1,10 @@
 package com.filewall.ui.viewer
 
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
@@ -187,10 +192,12 @@ fun NativePdfReader(
 
     Column(modifier.fillMaxSize().background(Color(0xFF202020))) {
         // Top: page layout.
-        if (chromeShown) Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
+        AnimatedVisibility(visible = chromeShown, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
             LayoutIcon(Icons.Filled.Description, "Single page", layout == 0) { layout = 0 }
             LayoutIcon(Icons.AutoMirrored.Filled.MenuBook, "Two pages", layout == 1) { layout = 1 }
             LayoutIcon(Icons.Filled.ViewAgenda, "Continuous", layout == 2) { layout = 2 }
+        }
         }
 
         Box(
@@ -232,14 +239,15 @@ fun NativePdfReader(
             Tool.CROSS, Tool.CHECK, Tool.DOT -> "Tap a spot on a page to place it."
             Tool.NONE -> status
         }
-        if (chromeShown && hint.isNotBlank()) {
+        AnimatedVisibility(visible = chromeShown && hint.isNotBlank(), enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             Text(hint, color = Color.White, style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         }
 
         // One bottom bar. Normally the main tools; when Draw or Fill & Sign is on, the
         // Acrobat-style tools take its place (undo and save stay within reach).
-        if (chromeShown) if (!panelOpen) {
+        AnimatedVisibility(visible = chromeShown, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+        if (!panelOpen) {
             Row(
                 Modifier.fillMaxWidth().background(Color(0xFF1F1F1F)).navigationBarsPadding().padding(vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -284,6 +292,7 @@ fun NativePdfReader(
                     Icon(Icons.Filled.Done, "Done", tint = Color(0xFFB39DDB), modifier = Modifier.size(18.dp))
                 }
             }
+        }
         }
     }
 

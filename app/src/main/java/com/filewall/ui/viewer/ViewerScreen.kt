@@ -169,7 +169,15 @@ fun ViewerScreen(
             // ---------------------------------------------------------- stage
             Box(
                 Modifier
-                    .height(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * if (item.isPdf) 1f else 0.6f)
+                    .height(
+                        if (item.isPdf) {
+                            androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp -
+                                androidx.compose.foundation.layout.WindowInsets.systemBars.asPaddingValues().calculateTopPadding() -
+                                androidx.compose.foundation.layout.WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+                        } else {
+                            androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * 0.6f
+                        }
+                    )
                     .fillMaxWidth()
                     .pointerInput(item.id, zoomable) {
                         if (!zoomable) return@pointerInput
