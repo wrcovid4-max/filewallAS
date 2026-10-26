@@ -2,8 +2,6 @@ package com.filewall.ui.storage
 
 import com.filewall.ui.common.InfoIcon
 import androidx.compose.ui.Alignment
-import android.os.Environment
-import android.os.StatFs
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,7 +15,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -36,8 +33,6 @@ import com.filewall.util.formatBytes
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageSheet(breakdown: StorageBreakdown, onDismiss: () -> Unit) {
-    val device = remember { deviceStorage() }
-
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier
@@ -53,34 +48,19 @@ fun StorageSheet(breakdown: StorageBreakdown, onDismiss: () -> Unit) {
                 )
                 InfoIcon(
                     "Storage",
-                    "Shows how full your phone is, and how your vault's space splits by type. Nothing here is uploaded.",
+                    "Shows how full your phone, SD card and any connected USB drive (HDD or SSD) are, and how your vault's space splits by type. Nothing here is uploaded.",
                     Modifier.padding(start = 4.dp),
                 )
             }
 
-            // Phone storage: the whole device, the same figure the system settings show.
+            // Every mounted storage device: the phone, an SD card, and USB drives (HDD / SSD / flash).
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Phone storage",
+                    text = "Storage devices",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                UsageBar(
-                    fraction = if (device.total > 0) device.used.toFloat() / device.total else 0f,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        text = "${formatBytes(device.used)} used",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = "${formatBytes(device.free)} free of ${formatBytes(device.total)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                StorageDrivesList()
             }
 
             // Vault storage: each type as a share of what the vault holds.
@@ -99,15 +79,6 @@ fun StorageSheet(breakdown: StorageBreakdown, onDismiss: () -> Unit) {
         }
     }
 }
-
-private data class DeviceStorage(val total: Long, val free: Long) {
-    val used: Long get() = (total - free).coerceAtLeast(0L)
-}
-
-private fun deviceStorage(): DeviceStorage = runCatching {
-    val stat = StatFs(Environment.getDataDirectory().path)
-    DeviceStorage(total = stat.totalBytes, free = stat.availableBytes)
-}.getOrDefault(DeviceStorage(total = 0L, free = 0L))
 
 @Composable
 private fun StorageRow(label: String, bytes: Long, vaultTotal: Long, color: Color) {

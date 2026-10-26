@@ -314,6 +314,14 @@ fun StorageBreakdownCard(breakdown: StorageBreakdown, modifier: Modifier = Modif
             LegendEntry(VideoBlue, stringResourceSafe(R.string.cat_videos), breakdown.videoBytes)
             LegendEntry(DocAmber, stringResourceSafe(R.string.cat_docs), breakdown.docBytes)
         }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "Storage devices",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(12.dp))
+        com.filewall.ui.storage.StorageDrivesList()
     }
 }
 

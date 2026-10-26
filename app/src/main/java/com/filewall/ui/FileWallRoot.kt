@@ -80,13 +80,19 @@ private sealed interface ViewerDialog {
 @Composable
 fun FileWallRoot(container: AppContainer, modifier: Modifier = Modifier) {
     val switcherScope = androidx.compose.runtime.rememberCoroutineScope()
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     // The language switcher belongs to the main tabs only; it stays out of the way of open files.
     var fileOpen by remember { mutableStateOf(false) }
     androidx.compose.foundation.layout.Box(modifier.fillMaxSize()) {
         FileWallScreens(container, Modifier.fillMaxSize(), onFileOpenChange = { fileOpen = it })
         if (!fileOpen) com.wrcovid.kit.language.LanguageSwitcher(
             restartBody = androidx.compose.ui.res.stringResource(com.filewall.R.string.language_restart_body),
-            onLanguageSaved = { tag -> switcherScope.launch { container.settings.setLanguage(tag) } },
+            onLanguageSaved = { tag ->
+                // Committed immediately, then mirrored to the settings store. The screen restarts as
+                // soon as the language changes, so the background write alone could be cut short.
+                com.filewall.util.LanguagePrefs.save(appContext, tag)
+                switcherScope.launch(kotlinx.coroutines.NonCancellable) { container.settings.setLanguage(tag) }
+            },
             modifier = Modifier
                 .align(androidx.compose.ui.Alignment.TopEnd)
                 .statusBarsPadding()
