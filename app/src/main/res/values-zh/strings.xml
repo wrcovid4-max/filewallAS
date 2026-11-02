@@ -205,4 +205,9 @@
     <string name="language_restart_title">重启以切换语言？</string>
     <string name="language_restart_body">应用将重启以切换为%1$s。您的文件和设置会被保留。</string>
     <string name="action_restart">重启</string>
+    <string name="storage_rename_title">重命名存储</string>
+    <string name="storage_rename_label">名称</string>
+    <string name="storage_rename_reset">恢复默认名称</string>
+    <string name="storage_rename_save">保存</string>
+    <string name="storage_rename_cancel">取消</string>
 </resources>

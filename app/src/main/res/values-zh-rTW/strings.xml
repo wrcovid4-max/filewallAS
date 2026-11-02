@@ -210,4 +210,9 @@
     <string name="language_restart_title">重啟以切換語言？</string>
     <string name="language_restart_body">應用程式將重新啟動以切換為%1$s。您的檔案和設定會被保留。</string>
     <string name="action_restart">重啟</string>
+    <string name="storage_rename_title">重新命名儲存空間</string>
+    <string name="storage_rename_label">名稱</string>
+    <string name="storage_rename_reset">還原預設名稱</string>
+    <string name="storage_rename_save">儲存</string>
+    <string name="storage_rename_cancel">取消</string>
 </resources>

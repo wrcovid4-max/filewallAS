@@ -211,4 +211,9 @@
     <string name="language_restart_title">برای تغییر زبان راه‌اندازی مجدد شود؟</string>
     <string name="language_restart_body">برنامه برای تغییر به %1$s دوباره راه‌اندازی می‌شود. فایل‌ها و تنظیمات شما حفظ می‌شوند.</string>
     <string name="action_restart">راه‌اندازی مجدد</string>
+    <string name="storage_rename_title">تغییر نام حافظه</string>
+    <string name="storage_rename_label">نام</string>
+    <string name="storage_rename_reset">بازنشانی نام</string>
+    <string name="storage_rename_save">ذخیره</string>
+    <string name="storage_rename_cancel">انصراف</string>
 </resources>

@@ -204,4 +204,9 @@
     <string name="language_restart_title">زبان بدلنے کے لیے ایپ دوبارہ شروع کریں؟</string>
     <string name="language_restart_body">ایپ %1$s میں تبدیل کرنے کے لیے دوبارہ شروع ہوگی۔ آپ کی فائلیں اور ترتیبات محفوظ رہیں گی۔</string>
     <string name="action_restart">دوبارہ شروع کریں</string>
+    <string name="storage_rename_title">اسٹوریج کا نام تبدیل کریں</string>
+    <string name="storage_rename_label">نام</string>
+    <string name="storage_rename_reset">نام بحال کریں</string>
+    <string name="storage_rename_save">محفوظ کریں</string>
+    <string name="storage_rename_cancel">منسوخ کریں</string>
 </resources>

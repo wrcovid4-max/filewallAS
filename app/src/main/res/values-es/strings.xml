@@ -209,4 +209,9 @@
     <string name="language_restart_title">¿Reiniciar para cambiar el idioma?</string>
     <string name="language_restart_body">La app se reiniciará para cambiar a %1$s. Tus archivos y ajustes se conservan.</string>
     <string name="action_restart">Reiniciar</string>
+    <string name="storage_rename_title">Renombrar almacenamiento</string>
+    <string name="storage_rename_label">Nombre</string>
+    <string name="storage_rename_reset">Restablecer nombre</string>
+    <string name="storage_rename_save">Guardar</string>
+    <string name="storage_rename_cancel">Cancelar</string>
 </resources>

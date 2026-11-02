@@ -4,26 +4,39 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.filewall.R
 import com.filewall.util.DriveKind
 import com.filewall.util.StorageDrive
 import com.filewall.util.formatBytes
@@ -56,12 +69,33 @@ fun rememberStorageDrives(): List<StorageDrive> {
     return drives
 }
 
+/** Names the user gave to drives, kept by volume id so they survive unplugging and re-plugging. */
+private object DriveNames {
+    private const val FILE = "storage_names"
+    fun load(context: Context): Map<String, String> {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        return prefs.all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
+    }
+    fun save(context: Context, id: String, name: String?) {
+        val e = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+        if (name.isNullOrBlank()) e.remove(id) else e.putString(id, name.trim())
+        e.apply()
+    }
+}
+
 /** One bar per storage device: phone storage, SD card, USB HDD / SSD. */
 @Composable
 fun StorageDrivesList(modifier: Modifier = Modifier) {
     val drives = rememberStorageDrives()
+    val context = LocalContext.current
+    val names = remember { mutableStateMapOf<String, String>().apply { putAll(DriveNames.load(context)) } }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        drives.forEach { drive -> DriveRow(drive) }
+        drives.forEach { drive ->
+            DriveRow(drive, names[drive.id]) { newName ->
+                DriveNames.save(context, drive.id, newName)
+                if (newName.isNullOrBlank()) names.remove(drive.id) else names[drive.id] = newName.trim()
+            }
+        }
         if (drives.none { it.kind != DriveKind.INTERNAL }) {
             Text(
                 text = "No SD card or USB drive (HDD / SSD / flash) is connected. Plug one in and it will appear here.",
@@ -73,14 +107,46 @@ fun StorageDrivesList(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun DriveRow(drive: StorageDrive) {
+private fun DriveRow(drive: StorageDrive, customName: String?, onRename: (String?) -> Unit) {
+    var renaming by remember { mutableStateOf(false) }
+    val shownName = customName ?: drive.name
+    if (renaming) {
+        var text by remember { mutableStateOf(shownName) }
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text(stringResource(R.string.storage_rename_title)) },
+            text = {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it.take(40) },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.storage_rename_label)) },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { onRename(text); renaming = false }) { Text(stringResource(R.string.storage_rename_save)) }
+            },
+            dismissButton = {
+                Row {
+                    if (customName != null) {
+                        TextButton(onClick = { onRename(null); renaming = false }) { Text(stringResource(R.string.storage_rename_reset)) }
+                    }
+                    TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.storage_rename_cancel)) }
+                }
+            },
+        )
+    }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                text = drive.name,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            Row(Modifier.clickable { renaming = true }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(
+                    text = shownName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.storage_rename_title), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Text(
                 text = drive.kind.takeIf { it != DriveKind.INTERNAL && it != DriveKind.OTHER }?.label
                     ?: "",

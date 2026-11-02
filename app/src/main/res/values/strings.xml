@@ -231,4 +231,9 @@
     <string name="language_restart_title">Restart to change language?</string>
     <string name="language_restart_body">The app will restart to switch to %1$s. Your files and settings are kept.</string>
     <string name="action_restart">Restart</string>
+    <string name="storage_rename_title">Rename storage</string>
+    <string name="storage_rename_label">Name</string>
+    <string name="storage_rename_reset">Reset name</string>
+    <string name="storage_rename_save">Save</string>
+    <string name="storage_rename_cancel">Cancel</string>
 </resources>

@@ -206,4 +206,9 @@
     <string name="language_restart_title">إعادة التشغيل لتغيير اللغة؟</string>
     <string name="language_restart_body">سيُعاد تشغيل التطبيق للتبديل إلى %1$s. ستبقى ملفاتك وإعداداتك محفوظة.</string>
     <string name="action_restart">إعادة التشغيل</string>
+    <string name="storage_rename_title">إعادة تسمية وحدة التخزين</string>
+    <string name="storage_rename_label">الاسم</string>
+    <string name="storage_rename_reset">إعادة الاسم الافتراضي</string>
+    <string name="storage_rename_save">حفظ</string>
+    <string name="storage_rename_cancel">إلغاء</string>
 </resources>

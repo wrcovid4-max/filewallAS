@@ -212,4 +212,9 @@
     <string name="language_restart_title">ਭਾਸ਼ਾ ਬਦਲਣ ਲਈ ਰੀਸਟਾਰਟ ਕਰੀਏ?</string>
     <string name="language_restart_body">ਐਪ %1$s ਵਿੱਚ ਬਦਲਣ ਲਈ ਮੁੜ ਸ਼ੁਰੂ ਹੋਵੇਗੀ। ਤੁਹਾਡੀਆਂ ਫ਼ਾਈਲਾਂ ਅਤੇ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਜਾਣਗੀਆਂ।</string>
     <string name="action_restart">ਰੀਸਟਾਰਟ ਕਰੋ</string>
+    <string name="storage_rename_title">ਸਟੋਰੇਜ ਦਾ ਨਾਂ ਬਦਲੋ</string>
+    <string name="storage_rename_label">ਨਾਂ</string>
+    <string name="storage_rename_reset">ਨਾਂ ਮੁੜ ਸੈੱਟ ਕਰੋ</string>
+    <string name="storage_rename_save">ਸੰਭਾਲੋ</string>
+    <string name="storage_rename_cancel">ਰੱਦ ਕਰੋ</string>
 </resources>

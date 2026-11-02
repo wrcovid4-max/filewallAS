@@ -26,6 +26,8 @@ data class StorageDrive(
     val total: Long,
     val free: Long,
     val readOnly: Boolean,
+    /** Stable identity of the volume (its UUID), used to remember a name the user gave it. */
+    val id: String = "",
 ) {
     val used: Long get() = (total - free).coerceAtLeast(0L)
 }
@@ -61,6 +63,7 @@ fun listStorageDrives(context: Context): List<StorageDrive> {
             total = stat?.totalBytes ?: 0L,
             free = stat?.availableBytes ?: 0L,
             readOnly = state == Environment.MEDIA_MOUNTED_READ_ONLY,
+            id = volume.uuid ?: if (volume.isPrimary) "primary" else description,
         )
     }
     return drives.ifEmpty { listOf(internalOnly()) }

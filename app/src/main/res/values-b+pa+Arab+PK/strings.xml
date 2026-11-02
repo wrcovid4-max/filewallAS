@@ -213,4 +213,9 @@
     <string name="language_restart_title">زبان بدلن لئی ری سٹارٹ کرو؟</string>
     <string name="language_restart_body">ایپ %1$s وچ بدلن لئی مڑ شروع ہووے گی۔ تہاڈیاں فائلاں تے سیٹنگاں محفوظ رہن گیاں۔</string>
     <string name="action_restart">ری سٹارٹ کرو</string>
+    <string name="storage_rename_title">اسٹوریج دا ناں بدلو</string>
+    <string name="storage_rename_label">ناں</string>
+    <string name="storage_rename_reset">ناں بحال کرو</string>
+    <string name="storage_rename_save">محفوظ کرو</string>
+    <string name="storage_rename_cancel">منسوخ کرو</string>
 </resources>

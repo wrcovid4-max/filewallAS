@@ -155,7 +155,7 @@ fun SecurityScreen(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 20.dp,
             end = 20.dp,
-            bottom = 120.dp,
+            bottom = 16.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
@@ -807,11 +807,9 @@ fun SecurityScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(top = 12.dp, bottom = 4.dp),
             )
         }
-
-
     }
 
     prompt?.let { current ->
