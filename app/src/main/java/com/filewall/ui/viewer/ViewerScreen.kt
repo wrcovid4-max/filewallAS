@@ -12,6 +12,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -105,7 +107,14 @@ fun ViewerScreen(
     var scale by remember(item.id) { mutableFloatStateOf(1f) }
     var offsetX by remember(item.id) { mutableFloatStateOf(0f) }
     var offsetY by remember(item.id) { mutableFloatStateOf(0f) }
-    val animatedScale by animateFloatAsState(targetValue = scale, label = "zoom")
+    // While fingers are on the screen the scale follows them exactly (snap). The soft spring is only used for
+    // double-tap and reset. A spring during the pinch made zooming out lag behind the fingers and jerk.
+    var pinching by remember(item.id) { mutableStateOf(false) }
+    val animatedScale by animateFloatAsState(
+        targetValue = scale,
+        animationSpec = if (pinching) snap() else spring(),
+        label = "zoom",
+    )
     val imageAlpha by animateFloatAsState(
         targetValue = if (image != null) 1f else 0f,
         animationSpec = tween(durationMillis = 350),
@@ -195,30 +204,36 @@ fun ViewerScreen(
                         // list and the video controls still scroll/seek.
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
+                            pinching = true
                             do {
                                 val event = awaitPointerEvent()
                                 val pressed = event.changes.count { it.pressed }
                                 when {
                                     pressed >= 2 -> {
-                                        scale = (scale * event.calculateZoom()).coerceIn(1f, 6f)
+                                        val oldScale = scale
+                                        val newScale = (oldScale * event.calculateZoom()).coerceIn(1f, 6f)
+                                        val ratio = if (oldScale <= 0f) 1f else newScale / oldScale
                                         val pan = event.calculatePan()
-                                        if (scale > 1f) {
-                                            offsetX += pan.x
-                                            offsetY += pan.y
-                                        } else {
-                                            offsetX = 0f
-                                            offsetY = 0f
-                                        }
+                                        // The offset shrinks in step with the scale, so zooming out glides back
+                                        // to the centre instead of snapping there at 1x.
+                                        val maxX = size.width * (newScale - 1f) / 2f
+                                        val maxY = size.height * (newScale - 1f) / 2f
+                                        scale = newScale
+                                        offsetX = (offsetX * ratio + pan.x).coerceIn(-maxX, maxX)
+                                        offsetY = (offsetY * ratio + pan.y).coerceIn(-maxY, maxY)
                                         event.changes.forEach { it.consume() }
                                     }
                                     pressed == 1 && scale > 1f -> {
                                         val pan = event.calculatePan()
-                                        offsetX += pan.x
-                                        offsetY += pan.y
+                                        val maxX = size.width * (scale - 1f) / 2f
+                                        val maxY = size.height * (scale - 1f) / 2f
+                                        offsetX = (offsetX + pan.x).coerceIn(-maxX, maxX)
+                                        offsetY = (offsetY + pan.y).coerceIn(-maxY, maxY)
                                         event.changes.forEach { it.consume() }
                                     }
                                 }
                             } while (event.changes.any { it.pressed })
+                            pinching = false
                         }
                     }
                     .pointerInput(item.id, zoomable) {
