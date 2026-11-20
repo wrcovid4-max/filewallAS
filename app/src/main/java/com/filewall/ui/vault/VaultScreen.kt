@@ -46,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,12 +94,15 @@ fun VaultScreen(
     onUnlockHidden: () -> Unit,
     onOpenItem: (VaultItem) -> Unit,
     modifier: Modifier = Modifier,
+    /** Bumped by a launcher shortcut to open the full-screen search; 0 means no request. */
+    searchRequest: Int = 0,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val moveFolders by viewModel.moveFolders.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<VaultDialog?>(null) }
     var searchActive by remember { mutableStateOf(false) }
+    LaunchedEffect(searchRequest) { if (searchRequest > 0) searchActive = true }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),

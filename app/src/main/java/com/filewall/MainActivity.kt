@@ -56,6 +56,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         com.filewall.data.drive.DriveMarks.load(this)
         consumeHandoff(intent)
         consumeShare(intent)
+        consumeShortcut(intent)
         requestNotificationPermissionIfNeeded()
 
         // FLAG_SECURE is applied before the first frame and re-applied whenever the
@@ -104,6 +105,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         setIntent(intent)
         consumeHandoff(intent)
         consumeShare(intent)
+        consumeShortcut(intent)
     }
 
     /**
@@ -147,6 +149,15 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         }
 
     /** Picks up an item id posted by the watch-handoff notification. */
+    private fun consumeShortcut(intent: Intent?) {
+        when (intent?.action) {
+            ShortcutActions.SEARCH, ShortcutActions.CONVERT, ShortcutActions.SETTINGS -> {
+                container.pendingShortcut.value = intent.action
+                intent.action = null   // don't replay on configuration change
+            }
+        }
+    }
+
     private fun consumeHandoff(intent: Intent?) {
         if (intent?.action != HandoffNotifier.ACTION_OPEN_ITEM) return
         intent.getStringExtra(HandoffNotifier.EXTRA_ITEM_ID)

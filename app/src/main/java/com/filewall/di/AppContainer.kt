@@ -74,4 +74,11 @@ class AppContainer(context: Context, appScope: CoroutineScope) {
      * arrive while the app is already running, in which case there is no fresh Intent to read.
      */
     val pendingOpen = MutableStateFlow<String?>(null)
+
+    /**
+     * A launcher shortcut waiting for the UI to act on it (one of the `ShortcutActions` strings).
+     * Held on the container for the same reason as [pendingOpen]: the shortcut can fire while
+     * the app is already running, and the vault may still be locked when it does.
+     */
+    val pendingShortcut = MutableStateFlow<String?>(null)
 }

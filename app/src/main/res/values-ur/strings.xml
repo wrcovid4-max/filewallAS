@@ -209,4 +209,6 @@
     <string name="storage_rename_reset">نام بحال کریں</string>
     <string name="storage_rename_save">محفوظ کریں</string>
     <string name="storage_rename_cancel">منسوخ کریں</string>
+    <string name="shortcut_search_short">تلاش</string>
+    <string name="shortcut_search_long">والٹ میں تلاش کریں</string>
 </resources>

@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -121,6 +122,7 @@ private fun FileWallScreens(
     val vaultState by vaultViewModel.state.collectAsStateWithLifecycle()
 
     var tab by remember { mutableStateOf(Tab.VAULT) }
+    var searchRequest by remember { mutableIntStateOf(0) }
     var viewerItem by remember { mutableStateOf<VaultItem?>(null) }
     var viewerOpen by remember { mutableStateOf(false) }
     LaunchedEffect(viewerOpen) { onFileOpenChange(viewerOpen) }
@@ -168,6 +170,20 @@ private fun FileWallScreens(
             ) { a, b, c, d -> a.size + b.size + c.size + d.size }
                 .debounce(3_000)
                 .collect { securityViewModel.syncNow(announce = false) }
+        }
+
+        // Launcher shortcuts (long-press the app icon): jump straight to a destination.
+        launch {
+            container.pendingShortcut.collect { action ->
+                if (action == null) return@collect
+                container.pendingShortcut.value = null
+                when (action) {
+                    com.filewall.ShortcutActions.SEARCH -> { tab = Tab.VAULT; searchRequest++ }
+                    com.filewall.ShortcutActions.CONVERT -> tab = Tab.CONVERT
+                    com.filewall.ShortcutActions.SETTINGS -> tab = Tab.SECURITY
+                    else -> Unit
+                }
+            }
         }
 
         // A watch handoff notification names an item; open it, then clear the request so a
@@ -255,6 +271,7 @@ private fun FileWallScreens(
             when (current) {
                 Tab.VAULT, Tab.HIDDEN -> VaultScreen(
                     viewModel = vaultViewModel,
+                    searchRequest = searchRequest,
                     pinManager = container.pinManager,
                     settings = settings,
                     onUnlockHidden = { container.lock.unlock() },

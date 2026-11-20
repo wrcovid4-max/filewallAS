@@ -211,4 +211,6 @@
     <string name="storage_rename_reset">إعادة الاسم الافتراضي</string>
     <string name="storage_rename_save">حفظ</string>
     <string name="storage_rename_cancel">إلغاء</string>
+    <string name="shortcut_search_short">بحث</string>
+    <string name="shortcut_search_long">البحث في الخزنة</string>
 </resources>

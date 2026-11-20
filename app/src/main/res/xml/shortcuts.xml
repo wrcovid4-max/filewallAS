@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="search"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_search"
+        android:shortcutShortLabel="@string/shortcut_search_short"
+        android:shortcutLongLabel="@string/shortcut_search_long">
+        <intent
+            android:action="com.filewall.action.SHORTCUT_SEARCH"
+            android:targetPackage="com.filewall"
+            android:targetClass="com.filewall.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="convert"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_convert"
+        android:shortcutShortLabel="@string/convert_tab"
+        android:shortcutLongLabel="@string/convert_tab">
+        <intent
+            android:action="com.filewall.action.SHORTCUT_CONVERT"
+            android:targetPackage="com.filewall"
+            android:targetClass="com.filewall.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="settings"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_settings"
+        android:shortcutShortLabel="@string/tab_security"
+        android:shortcutLongLabel="@string/tab_security">
+        <intent
+            android:action="com.filewall.action.SHORTCUT_SETTINGS"
+            android:targetPackage="com.filewall"
+            android:targetClass="com.filewall.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -56,6 +56,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="*/*" />
             </intent-filter>
+
+            <!-- Long-press launcher shortcuts: Search / Convert / Settings. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- Answers manifest / image requests coming from the Wear OS companion. -->

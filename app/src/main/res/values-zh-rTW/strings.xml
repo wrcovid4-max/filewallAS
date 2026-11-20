@@ -215,4 +215,6 @@
     <string name="storage_rename_reset">還原預設名稱</string>
     <string name="storage_rename_save">儲存</string>
     <string name="storage_rename_cancel">取消</string>
+    <string name="shortcut_search_short">搜尋</string>
+    <string name="shortcut_search_long">搜尋保險庫</string>
 </resources>

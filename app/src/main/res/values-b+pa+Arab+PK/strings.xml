@@ -218,4 +218,6 @@
     <string name="storage_rename_reset">ناں بحال کرو</string>
     <string name="storage_rename_save">محفوظ کرو</string>
     <string name="storage_rename_cancel">منسوخ کرو</string>
+    <string name="shortcut_search_short">ڈھونڈو</string>
+    <string name="shortcut_search_long">والٹ وچ ڈھونڈو</string>
 </resources>

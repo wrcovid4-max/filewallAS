@@ -214,4 +214,6 @@
     <string name="storage_rename_reset">Restablecer nombre</string>
     <string name="storage_rename_save">Guardar</string>
     <string name="storage_rename_cancel">Cancelar</string>
+    <string name="shortcut_search_short">Buscar</string>
+    <string name="shortcut_search_long">Buscar en la bóveda</string>
 </resources>

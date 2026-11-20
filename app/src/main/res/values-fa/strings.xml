@@ -216,4 +216,6 @@
     <string name="storage_rename_reset">بازنشانی نام</string>
     <string name="storage_rename_save">ذخیره</string>
     <string name="storage_rename_cancel">انصراف</string>
+    <string name="shortcut_search_short">جستجو</string>
+    <string name="shortcut_search_long">جستجو در گاوصندوق</string>
 </resources>

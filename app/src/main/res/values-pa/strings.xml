@@ -217,4 +217,6 @@
     <string name="storage_rename_reset">ਨਾਂ ਮੁੜ ਸੈੱਟ ਕਰੋ</string>
     <string name="storage_rename_save">ਸੰਭਾਲੋ</string>
     <string name="storage_rename_cancel">ਰੱਦ ਕਰੋ</string>
+    <string name="shortcut_search_short">ਖੋਜ</string>
+    <string name="shortcut_search_long">ਵਾਲਟ ਵਿੱਚ ਖੋਜੋ</string>
 </resources>
